@@ -45,6 +45,23 @@ MySQL就是一款基于CS的数据库管理系统。其中，服务器就是运�
     primary key (id)
   );
   ```
+  ```sql
+  create table analysis_ADNS(
+  domain char(20),
+  ns_ip char(15),
+  detected int default 0,
+  aa char,
+  ra char,
+  status char(10),
+  answers_num int,
+  authority_num int,
+  additional_num int,
+  answers tinytext,
+  authority tinytext,
+  additional tinytext,
+  primary key(domain,ns_ip)
+  );
+  ```
 ## 五. 数据类型
 * 枚举
   ```sql
