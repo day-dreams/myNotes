@@ -1,5 +1,11 @@
 《深度探索C++对象模型》 学习笔记
 <!-- TOC -->
+ * @author daydream
+ * @email [zn.moon2016@gmail.com]
+ * @create date 2017-06-18 06:56:24
+ * @modify date 2017-06-18 06:56:24
+ * @desc [个人笔记]
+
 
 - [1. About Object](#1-about-object)
     - [1.1. C++对象模型](#11-c对象模型)
@@ -54,9 +60,27 @@ C++中多态的实现依赖虚函数,《c++ primer》这样解释：
 
 ### 1.1.2. 对象的内存布局
 
+#### 无虚函数的对象内存布局
 
+    只要没有虚函数,类的对象布局其实很简单.与c语言相比,这种情况下的类不但没有增加性能负担,反而提高了编程时的便捷.
+##### 简单类
 
+    简单类没有任何继承关系,也没有虚函数，只含有基本的成员函数和成员对象．  
+    * 成员函数实际上是一种语法糖，虽然看起来是**在运行期用类对象来调用类的方法**，实际是**在编译期将指向类对象的指针(隐含的this指针)传给类的函数进行调用**  
+    * 成员变量则类似于传统C语言的struct,一般编译器保证按照在类声明中成员变量出现的顺序去安排内存布局,使成员变量紧凑排列(如果需要,会进行**对齐**)    
+    而对于类的静态成员变量和静态成员函数,它们都被放在单独的区域,不在个别的对象中,调用和访问都是通过指针实现.
+#### 简单类的派生类
+    简单类的派生情况,不过是将子类的成员变量加到父类的成员变量之后(同样需要考虑对齐).不论是单重继承还是多重继承,都可以通过粗暴的指针操作进行成员变量访问,具体细节见[代码](https://github.com/day-dreams/myNotes/tree/master/C%2B%2B/easy-class-inheritance.cpp).  
 
+#### 带虚函数的对象内存布局
+    虚函数是由vptr实现的,它的特性有:
+    * vptr指向一个虚函数表格,表格里是**指向虚函数和type_info object的指针**  
+    * type_info object用于实现RTTI(runtime type identification),主要用在类型转换和typeid()  
+    * vptr的设定和重置由constructor,destructor,copy constructor完成  
+    * vptr一般被放在对象内存布局的最前方  
+    总结,带虚函数的对象的内存布局为:vptr+成员变量,验证见[代码](https://github.com/day-dreams/myNotes/tree/master/C%2B%2B/vfun-class-model.cpp).注意,我的例子**无法观察到虚函数表的结尾标志**.  
+    
+<!---->
 # 2. The Semantics of Constructors
 # 3. The Semantics of Data
 # 4. The Semantics of Function
@@ -70,3 +94,5 @@ C++中多态的实现依赖虚函数,《c++ primer》这样解释：
 
 [C++对象模型之内存布局一](http://luodw.cc/2015/10/06/Cplus1/)  
 [C++对象模型之内存布局二](http://luodw.cc/2015/10/07/Cplus2/)
+
+[C++中的RTTI机制解析](http://blog.csdn.net/three_bird/article/details/51479175)
