@@ -1,0 +1,5 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0 )
+PROJECT(MYDEMO)
+aux_source_directory(src/ mysources)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+add_executable(mydemo src/main.cpp ${mysources})
