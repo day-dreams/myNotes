@@ -4,3 +4,4 @@
 *.out
 core
 *.pdf
+.vscode
