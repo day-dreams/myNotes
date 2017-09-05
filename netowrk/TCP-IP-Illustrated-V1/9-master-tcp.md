@@ -26,6 +26,11 @@
         - [2.3.1. 状态转换图](#231-状态转换图)
         - [2.3.2. TIME_WAIT状态](#232-time_wait状态)
         - [2.3.3. SO_REUSEPORT 和 SO_RESUEADDR](#233-so_reuseport-和-so_resueaddr)
+        - [shutdown函数](#shutdown函数)
+    - [重置报文段](#重置报文段)
+        - [对不存在端口发起请求](#对不存在端口发起请求)
+        - [终止一条连接](#终止一条连接)
+            - [SO_LINGER](#so_linger)
 - [3. TCP超时与重传](#3-tcp超时与重传)
 - [4. TCP数据流与窗口管理](#4-tcp数据流与窗口管理)
 - [5. TCP拥塞控制](#5-tcp拥塞控制)
@@ -138,11 +143,38 @@ Max Segment Size: TCP提交给IP层的最大分段大小，之包括TCP payload�
 
 TIME_WAIT状态的存在是为了避免这样的情况：被动关闭方，接受到FIN并发回了ACK，这时，被动关闭方要继续发送一个FIN，并期望得到一个ACK。这是，主动关闭方收到被动方发来的FIN，并回复一个ACK，进入**TIME_WAIT状态**.这个状态是为了等待一件事情：被动方没有收到ACK，而重新发送了FIN，
 
+TIME_WAIT状态持续的时间是2MSL(Maximum Segment Lifetime)。这个时间限制的来源是IP数据报的TTL和条数限制字段，一般被操作系统制定。
+
 ### 2.3.3. SO_REUSEPORT 和 SO_RESUEADDR
 
 当一个<addr，port>被两个套接字同时监听(listen),当这个<addr，port>接受多个连接时，会分发到不同的套接字里，而且分发无规律。
 
 这可以当成：一个服务器的多个实例，运行在同一个监听地址<addr，port>上。
+
+### shutdown函数
+```c
+#include<sys/socket.h>
+
+int shutdown(int sockfd,int howto);//强制触发FIN
+```
+
+这里的howto参数决定了连接终止方式：关闭读，关闭写，关闭读写(完整的四次握手)。
+
+## 重置报文段
+
+RST字段用于处理很多错误状态。这个标志会导致TCP连接的快速拆卸。
+
+### 对不存在端口发起请求
+
+### 终止一条连接
+
+使用RST字段的终止方式与FIN终止不同。FIN终止会考虑到读cache和写buffer，RST则直接抛弃它们，将这个包含RST的报文直接发出去，而不是像send那样的延迟发送。
+
+这个涉及到另一个套接字选项：SO_LINGER
+
+#### SO_LINGER
+
+这个选项可以用来避免TIME_WAIT，因为正确设置了SO_LINGER之后，如果连接中的一方发出了RST，另一方会直接回收这个socket(连接变为closed状态)。
 
 # 3. TCP超时与重传
 
