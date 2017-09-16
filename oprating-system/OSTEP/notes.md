@@ -17,9 +17,9 @@ Operating Systems: Three Easy Pieces
     - [2.3. exec()](#23-exec)
     - [2.4. 神奇的组合效果](#24-神奇的组合效果)
 - [3. chapter 6, Mechanism: Limited Direct Execution](#3-chapter-6-mechanism-limited-direct-execution)
-    - [Direct Execution Protocol](#direct-execution-protocol)
-    - [Limited Direction Execution Protocol](#limited-direction-execution-protocol)
-    - [Switching Between Processes](#switching-between-processes)
+    - [3.1. Direct Execution Protocol](#31-direct-execution-protocol)
+    - [3.2. Limited Direction Execution Protocol](#32-limited-direction-execution-protocol)
+    - [3.3. Switching Between Processes](#33-switching-between-processes)
 
 <!-- /TOC -->
 
@@ -187,7 +187,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 * 我们减小额外的性能开销
 * 如何在允许进程占用CPU的同时,保证对CPU的控制.
 
-## Direct Execution Protocol
+## 3.1. Direct Execution Protocol
 
 这里先介绍没有限制的一种运行协议:Direct Execution Protocol.这个协议清晰的反映出一个进程的执行需要哪些支持?
 
@@ -208,7 +208,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 
 但是这还不够,有这样的问题没有解决:操作系统如何防止进程做一些不必要的**恶意操作**?比如清空磁盘,更改中断向量表,滥用网络流量.
 
-## Limited Direction Execution Protocol
+## 3.2. Limited Direction Execution Protocol
 
 现在,我们首先解决恶意操作的问题.我们要对一些操作设置权限,让进程难以进行恶意操作.
 
@@ -250,29 +250,21 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 
 但依然剩下一个问题:没有实现进程切换(switch)
 
-## Switching Between Processes
+## 3.3. Switching Between Processes
 
-这里我们先明确什么是running.只有拥有cpu时间片才叫做running.
+这里我们先明确什么是running.只有拥有cpu时间片才叫做running.所以,当用户进程running的时候,操作系统没有获得cpu时间片,没有running.
 
-所以,当用户进程running的时候,操作系统没有获得cpu时间片,没有running.
+那么,OS如何在自己不running的时候,去strop a process并switch a process呢?实际上,OS需要**regain control of CPU**.
 
-那么,OS如何在自己不running的时候,去strop a process并switch a process呢?
+最初的一些OS假设,所有用户进程都会适时地归还控制权,一般是通过trap来实现的.特别是在用户进程发生了一些一场:devided by zero等,就会发生trap,OS借机regain control.但这并不合适,比如,用户进程陷入了死循环,但又不trap,那么OS就没办法regain control.
 
-实际上,OS需要**regain control of CPU**.
-
-最初,一些OS假设,所有用户进程都会适时地归还控制权,一般是通过trap来实现的.特别是在用户进程发生了一些一场:devided by zero等,就会发生trap,OS借机regain control.
-
-但这并不合适,比如,用户进程陷入了死循环,但又不trap,那么OS就没办法regain control.
-
-那好,既然用户进程不一定trap,我们就设置一个一定会引起trap的机制,来帮助操作系统regain control.
-
-这个机制就是:**timer interrupt**.
+那好,既然用户进程不一定trap,我们就设置一个一定会引起trap的机制,来帮助操作系统regain control.这个机制就是:**timer interrupt**.
 
 我们用硬件实现一个timer,没当timer到期,就发起一个中断请求.这个中断出发的代码会保存当前用户进程的各种状态,再将控制权交给OS,**由OS来决定,是不是继续执行这个进程**,这就是**调度机制(scheduler)**.
 
 如果OS在schedule的时候,或者在进行系统调用的时候,timer到期发起interuppt呢?我们说,hardware一旦接受了timer的中断请求,就控制权返回给OS,就会**关闭中断(MASK)**,从而使timer不能中断OS.
 
-我们再提一下,timer触发interuppt后,OS夺权是如何**保存上下文**,同时进入下一个进程时如何**切换上下文**.我们仅仅列举一下先xv6的上下文切换汇编代码.
+我们再提一下,timer触发interuppt后,OS夺权是如何**保存上下文**,同时进入下一个进程时如何**切换上下文**.其实就是寄存器的保存,我们仅仅列举一下先xv6的上下文切换汇编代码.
 
 ```assembly
 
@@ -292,7 +284,7 @@ swtch:
     movl %edx, 16(%eax)
     movl %esi, 20(%eax)
     movl %edi, 24(%eax)
-    movl %ebp, 28(%eax
+    movl %ebp, 28(%eax)
 
     # Load new registers
     movl 4(%esp), %eax  # put new ptr into eax
