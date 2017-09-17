@@ -20,6 +20,15 @@ Operating Systems: Three Easy Pieces
     - [3.1. Direct Execution Protocol](#31-direct-execution-protocol)
     - [3.2. Limited Direction Execution Protocol](#32-limited-direction-execution-protocol)
     - [3.3. Switching Between Processes](#33-switching-between-processes)
+    - [3.4. 为什么系统调用开销大](#34-为什么系统调用开销大)
+- [4. chapter 7, Scheduling:Introduction](#4-chapter-7-schedulingintroduction)
+    - [4.1. 一些衡量标准](#41-一些衡量标准)
+    - [4.2. FIFO](#42-fifo)
+    - [4.3. Shortest Job First(SJF)](#43-shortest-job-firstsjf)
+    - [4.4. Shortest Time-to-Completion First(STCF)](#44-shortest-time-to-completion-firststcf)
+    - [4.5. Round Robin](#45-round-robin)
+    - [4.6. 考虑IO](#46-考虑io)
+- [5. chapter 8, Scheduling: The Multi-Level Feedback Queue](#5-chapter-8-scheduling-the-multi-level-feedback-queue)
 
 <!-- /TOC -->
 
@@ -300,6 +309,61 @@ swtch:
 
 ```
 
+## 3.4. 为什么系统调用开销大
+
+现在我们已经明白,系统调用意味着trap into kernel mode.系统调用实际上是OS在运行.系统调用的开销主要在这里:
+
+* 上下文切换:trap一次,return-from-trap又一次
+* IO慢速:比如网络,磁盘等IO,很可能带来等待时间
 
 
+# 4. chapter 7, Scheduling:Introduction
 
+这一章是为了延续上一章的调度问题,我们将引入一些调度算法,来选择一些进程去执行.
+
+## 4.1. 一些衡量标准
+
+首先,我们需要一些衡量标准来衡量一个调度算法.
+
+|衡量标准|侧重点|计算方法|说明|
+|-|-|-|-|
+|Turnaround Time|performance|作业完成时间-作业发起时间|一般取一系列作业的均值|
+|Response Time|fairness|作业第一次开始时间-作业发起时间||
+
+## 4.2. FIFO
+
+FIFO作为一种调度算法,十分的差劲.
+
+它只能选择最先发起的作业去完成.完全没有考虑到IO,也没有考虑到作业本身要占用CPU时间的不同.很容易出现一个长时间任务长期占用CPU,后续作业排队的情况.
+
+## 4.3. Shortest Job First(SJF)
+
+这个算法建立在一个假设上:OS知道每个作业做需要占用的CPU时间.它在当前排队的作业中,选择耗时最少的,分配CPU时间.
+
+同样的具有一个问题:一个耗时长的作业最先到来,于是SJF分配CPU给它,但是马上又来了一批耗时相对非常短的作业.这导致平均turnaround时间被拉长.
+
+## 4.4. Shortest Time-to-Completion First(STCF)
+
+在SJF中,无法解决轻量级作业后到来的问题.所以,我们引入一种抢占(preempt)的概念.
+
+现在,来了一个作业B.如果B立即开始抢占CPU,会比当前正在占用CPU的作业A继续占用先完成,那么STCF选择分配CPU给B.
+
+依然有个问题,STCF可能会造成,某个作业等待被调度的时间过长,从而拉高了平均相应时间.
+
+## 4.5. Round Robin
+
+现在采取一种新的思路:将CPU时间分片.每个作业占用CPU的基本时间单位为time slice.RoundRobin简单的以time sclice为单位,依次执行队列中的作业,直到所有作业都完成.
+
+如果time slice选择的合适,可以显著的减小平均相应时间,但是也可能因为频繁切换进程,导致上下文保护和回复所带来的开销过大.
+
+## 4.6. 考虑IO
+
+现在,我们还没有处理IO.一个作业很可能会申请IO操作,如果作业发起IO后,一边占用CPU,一边等待IO完成,未免太浪费.
+
+我们可以将带有IO的作业拆分为子作业,IO事件单独在一个子作业中,非IO事件则被IO事件切分成其他子作业.注意,这只是一个概念上的不同.方便我们理解这样的策略:遇到IO事件时,将CPU分配给其他作业,同时等待IO事件完成.这就造成了一个作业的子作业和其他作业重叠(overlap)进行的错觉.
+
+当IO事件完成,会发起一个中断申请,从而让CPU可以继续执行之前的作业.
+
+到了这里,我们还剩下一个问题:**OS不知道一个作业需要占用CPU多久,也不知道这个作业里有没有IO事件**.我们需要对这两个问题进行预测,预测的基础是最近一段时间各个作业的表现情况.
+
+# 5. chapter 8, Scheduling: The Multi-Level Feedback Queue
