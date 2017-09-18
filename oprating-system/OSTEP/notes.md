@@ -2,39 +2,48 @@ Operating Systems: Three Easy Pieces
 =====================================
 <!-- TOC -->
 
-- [1. chapter 4, The Abstraction: The Process](#1-chapter-4-the-abstraction-the-process)
-    - [1.1. 什么是进程](#11-什么是进程)
-    - [1.2. 用于控制进程的API](#12-用于控制进程的api)
-    - [1.3. 创建一个进程需要哪些工作](#13-创建一个进程需要哪些工作)
-        - [1.3.1. 将程序装载到内存](#131-将程序装载到内存)
-        - [1.3.2. 分配堆栈内存](#132-分配堆栈内存)
-        - [1.3.3. 其他初始化工作](#133-其他初始化工作)
-    - [1.4. 进程状态](#14-进程状态)
-    - [1.5. 进程需要的数据结构](#15-进程需要的数据结构)
-- [2. chapter 5, Interlude: Process API](#2-chapter-5-interlude-process-api)
-    - [2.1. fork()](#21-fork)
-    - [2.2. wait()](#22-wait)
-    - [2.3. exec()](#23-exec)
-    - [2.4. 神奇的组合效果](#24-神奇的组合效果)
-- [3. chapter 6, Mechanism: Limited Direct Execution](#3-chapter-6-mechanism-limited-direct-execution)
-    - [3.1. Direct Execution Protocol](#31-direct-execution-protocol)
-    - [3.2. Limited Direction Execution Protocol](#32-limited-direction-execution-protocol)
-    - [3.3. Switching Between Processes](#33-switching-between-processes)
-    - [3.4. 为什么系统调用开销大](#34-为什么系统调用开销大)
-- [4. chapter 7, Scheduling:Introduction](#4-chapter-7-schedulingintroduction)
-    - [4.1. 一些衡量标准](#41-一些衡量标准)
-    - [4.2. FIFO](#42-fifo)
-    - [4.3. Shortest Job First(SJF)](#43-shortest-job-firstsjf)
-    - [4.4. Shortest Time-to-Completion First(STCF)](#44-shortest-time-to-completion-firststcf)
-    - [4.5. Round Robin](#45-round-robin)
-    - [4.6. 考虑IO](#46-考虑io)
-- [5. chapter 8, Scheduling: The Multi-Level Feedback Queue](#5-chapter-8-scheduling-the-multi-level-feedback-queue)
+- [1. CPU Virtualization](#1-cpu-virtualization)
+    - [1.1. chapter 4, The Abstraction: The Process](#11-chapter-4-the-abstraction-the-process)
+        - [1.1.1. 什么是进程](#111-什么是进程)
+        - [1.1.2. 用于控制进程的API](#112-用于控制进程的api)
+        - [1.1.3. 创建一个进程需要哪些工作](#113-创建一个进程需要哪些工作)
+            - [1.1.3.1. 将程序装载到内存](#1131-将程序装载到内存)
+            - [1.1.3.2. 分配堆栈内存](#1132-分配堆栈内存)
+            - [1.1.3.3. 其他初始化工作](#1133-其他初始化工作)
+        - [1.1.4. 进程状态](#114-进程状态)
+        - [1.1.5. 进程需要的数据结构](#115-进程需要的数据结构)
+    - [1.2. chapter 5, Interlude: Process API](#12-chapter-5-interlude-process-api)
+        - [1.2.1. fork()](#121-fork)
+        - [1.2.2. wait()](#122-wait)
+        - [1.2.3. exec()](#123-exec)
+        - [1.2.4. 神奇的组合效果](#124-神奇的组合效果)
+    - [1.3. chapter 6, Mechanism: Limited Direct Execution](#13-chapter-6-mechanism-limited-direct-execution)
+        - [1.3.1. Direct Execution Protocol](#131-direct-execution-protocol)
+        - [1.3.2. Limited Direction Execution Protocol](#132-limited-direction-execution-protocol)
+        - [1.3.3. Switching Between Processes](#133-switching-between-processes)
+        - [1.3.4. 为什么系统调用开销大](#134-为什么系统调用开销大)
+    - [1.4. chapter 7, Scheduling:Introduction](#14-chapter-7-schedulingintroduction)
+        - [1.4.1. 一些衡量标准](#141-一些衡量标准)
+        - [1.4.2. FIFO](#142-fifo)
+        - [1.4.3. Shortest Job First(SJF)](#143-shortest-job-firstsjf)
+        - [1.4.4. Shortest Time-to-Completion First(STCF)](#144-shortest-time-to-completion-firststcf)
+        - [1.4.5. Round Robin](#145-round-robin)
+        - [1.4.6. 考虑IO](#146-考虑io)
+    - [1.5. chapter 8, Scheduling: The Multi-Level Feedback Queue](#15-chapter-8-scheduling-the-multi-level-feedback-queue)
+    - [1.6. chapter 9, Scheduling: Proportional Share](#16-chapter-9-scheduling-proportional-share)
+    - [1.7. chapter 10, Multiprocessor Scheduling](#17-chapter-10-multiprocessor-scheduling)
+- [2. Memory VIrtualization](#2-memory-virtualization)
+    - [2.1. chapter 13, The Abstraction:Address Spaces](#21-chapter-13-the-abstractionaddress-spaces)
 
 <!-- /TOC -->
 
-# 1. chapter 4, The Abstraction: The Process
+# 1. CPU Virtualization
 
-## 1.1. 什么是进程
+CPU虚拟化是为了营造一种假象:**用户交给操作系统的任务能够同时运行**.为了营造这种假象,我们不得不引入程序运行的基本单位:进程,以及进程的调度问题.
+
+## 1.1. chapter 4, The Abstraction: The Process
+
+### 1.1.1. 什么是进程
 首先我们要明白什么是进程.进程操作系统对运行中的程序的一种抽象.
 
 那么,对于进程执行来说,有那些重要的操作系统部分?
@@ -43,7 +52,7 @@ Operating Systems: Three Easy Pieces
 * **寄存器**:用于存放进程的另一部分数据,特殊的有,PC,StackPointer等
 * **存储设备**:一些进程正在访问的I/O文件
 
-## 1.2. 用于控制进程的API
+### 1.1.2. 用于控制进程的API
 
 既然是一种抽象,就因该有接口来管理这层抽象.我们一般需要这些接口:
 * **Create**:创建一个进程
@@ -52,9 +61,9 @@ Operating Systems: Three Easy Pieces
 * **Miscellaneous Control**:各种控制方法,如挂起和激活
 * **Status**:查看一个进程的状态
 
-## 1.3. 创建一个进程需要哪些工作
+### 1.1.3. 创建一个进程需要哪些工作
 
-### 1.3.1. 将程序装载到内存
+#### 1.1.3.1. 将程序装载到内存
 
 装载包括指令和数据两个部分.程序首先以某种可执行文件(ELF,EXE)的形式存在与磁盘上,操作系统可以读取它们并写入内存。
 
@@ -64,13 +73,13 @@ eagerly装载就简单的把所有程序指令都装入内存,无论是否真的
 
 lazy装载则不同,只放入一些重要片段.这往往与分页机制有关,暂不研究.
 
-### 1.3.2. 分配堆栈内存
+#### 1.1.3.2. 分配堆栈内存
 
 进程必须具有一个独立的栈.这个栈往往用来存放临时变量,同时具有最大空间限制(例如8M).
 
 还有堆内存.例如C程序,有静态全局变量这样的东西.同时还有一些动态分配的内存需要堆来负责.所以,这个堆一开始往往较小,随着程序运行而增长.
 
-### 1.3.3. 其他初始化工作
+#### 1.1.3.3. 其他初始化工作
 
 还需要做一些IO方面的初始化.
 
@@ -78,7 +87,7 @@ lazy装载则不同,只放入一些重要片段.这往往与分页机制有关,�
 
 当一些准备好了,操作系统需要将进程的执行起点调至main函数,进入就需状态,等待合适的CPU时间片分配给进程.
 
-## 1.4. 进程状态
+### 1.1.4. 进程状态
 
 共同的状态有：
 
@@ -94,7 +103,7 @@ lazy装载则不同,只放入一些重要片段.这往往与分页机制有关,�
 * 僵死
 * 跟踪：这个状态存在与一些调试情景，debugger将进程暂停，用于调试。
 
-## 1.5. 进程需要的数据结构
+### 1.1.5. 进程需要的数据结构
 
 为了管理,调度,跟踪进程,操作系统需要一些特定的数据结构来记录进程的信息.一般包括Processlist和PCB.
 
@@ -156,25 +165,25 @@ struct trapframe *tf;
 ```
 
 
-# 2. chapter 5, Interlude: Process API
+## 1.2. chapter 5, Interlude: Process API
 
 这一章主要是Unix中的三个控制进程的接口，fork,exec,wait三个系统调用，顺便实现了一下重定向。
 
-## 2.1. fork()
+### 1.2.1. fork()
 
 fork将进程复制了一份，包括：内存，寄存器等。这可能带来一个不必要的复制动作，但是现在也有了CopyOnWrite技术，没什么好纠结的。
 
-## 2.2. wait()
+### 1.2.2. wait()
 
 wait被父进程用来等待其子进程结束，可以一定程度克服父子进程运行先后顺序不确定的问题。
 
-## 2.3. exec()
+### 1.2.3. exec()
 
 exec完全就像是重新创建进程。它首先将当前进程的各种信息、数据全部抹去，再换上新程序的代码段、数据段，同时初始化寄存器等。
 
 可以感觉到，这个系统调用还是比较重的。它做的事情太多了，我们确实需要一种更轻便的系统调用。
 
-## 2.4. 神奇的组合效果
+### 1.2.4. 神奇的组合效果
 
 确实，上面三个API都不是纯粹的创建进程，都或多或少的做了点其他事情。但他们的确可以完成创建进程的任务。
 
@@ -186,7 +195,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 
 新的程序会将输出输出到第二步设定好的文件中。
 
-# 3. chapter 6, Mechanism: Limited Direct Execution
+## 1.3. chapter 6, Mechanism: Limited Direct Execution
 
 这一章主要是介绍进程运行的机制:限制型直接执行.
 
@@ -196,7 +205,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 * 我们减小额外的性能开销
 * 如何在允许进程占用CPU的同时,保证对CPU的控制.
 
-## 3.1. Direct Execution Protocol
+### 1.3.1. Direct Execution Protocol
 
 这里先介绍没有限制的一种运行协议:Direct Execution Protocol.这个协议清晰的反映出一个进程的执行需要哪些支持?
 
@@ -217,7 +226,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 
 但是这还不够,有这样的问题没有解决:操作系统如何防止进程做一些不必要的**恶意操作**?比如清空磁盘,更改中断向量表,滥用网络流量.
 
-## 3.2. Limited Direction Execution Protocol
+### 1.3.2. Limited Direction Execution Protocol
 
 现在,我们首先解决恶意操作的问题.我们要对一些操作设置权限,让进程难以进行恶意操作.
 
@@ -259,7 +268,7 @@ exec完全就像是重新创建进程。它首先将当前进程的各种信息�
 
 但依然剩下一个问题:没有实现进程切换(switch)
 
-## 3.3. Switching Between Processes
+### 1.3.3. Switching Between Processes
 
 这里我们先明确什么是running.只有拥有cpu时间片才叫做running.所以,当用户进程running的时候,操作系统没有获得cpu时间片,没有running.
 
@@ -309,7 +318,7 @@ swtch:
 
 ```
 
-## 3.4. 为什么系统调用开销大
+### 1.3.4. 为什么系统调用开销大
 
 现在我们已经明白,系统调用意味着trap into kernel mode.系统调用实际上是OS在运行.系统调用的开销主要在这里:
 
@@ -317,11 +326,11 @@ swtch:
 * IO慢速:比如网络,磁盘等IO,很可能带来等待时间
 
 
-# 4. chapter 7, Scheduling:Introduction
+## 1.4. chapter 7, Scheduling:Introduction
 
 这一章是为了延续上一章的调度问题,我们将引入一些调度算法,来选择一些进程去执行.
 
-## 4.1. 一些衡量标准
+### 1.4.1. 一些衡量标准
 
 首先,我们需要一些衡量标准来衡量一个调度算法.
 
@@ -330,19 +339,19 @@ swtch:
 |Turnaround Time|performance|作业完成时间-作业发起时间|一般取一系列作业的均值|
 |Response Time|fairness|作业第一次开始时间-作业发起时间||
 
-## 4.2. FIFO
+### 1.4.2. FIFO
 
 FIFO作为一种调度算法,十分的差劲.
 
 它只能选择最先发起的作业去完成.完全没有考虑到IO,也没有考虑到作业本身要占用CPU时间的不同.很容易出现一个长时间任务长期占用CPU,后续作业排队的情况.
 
-## 4.3. Shortest Job First(SJF)
+### 1.4.3. Shortest Job First(SJF)
 
 这个算法建立在一个假设上:OS知道每个作业做需要占用的CPU时间.它在当前排队的作业中,选择耗时最少的,分配CPU时间.
 
 同样的具有一个问题:一个耗时长的作业最先到来,于是SJF分配CPU给它,但是马上又来了一批耗时相对非常短的作业.这导致平均turnaround时间被拉长.
 
-## 4.4. Shortest Time-to-Completion First(STCF)
+### 1.4.4. Shortest Time-to-Completion First(STCF)
 
 在SJF中,无法解决轻量级作业后到来的问题.所以,我们引入一种抢占(preempt)的概念.
 
@@ -350,13 +359,13 @@ FIFO作为一种调度算法,十分的差劲.
 
 依然有个问题,STCF可能会造成,某个作业等待被调度的时间过长,从而拉高了平均相应时间.
 
-## 4.5. Round Robin
+### 1.4.5. Round Robin
 
 现在采取一种新的思路:将CPU时间分片.每个作业占用CPU的基本时间单位为time slice.RoundRobin简单的以time sclice为单位,依次执行队列中的作业,直到所有作业都完成.
 
 如果time slice选择的合适,可以显著的减小平均相应时间,但是也可能因为频繁切换进程,导致上下文保护和回复所带来的开销过大.
 
-## 4.6. 考虑IO
+### 1.4.6. 考虑IO
 
 现在,我们还没有处理IO.一个作业很可能会申请IO操作,如果作业发起IO后,一边占用CPU,一边等待IO完成,未免太浪费.
 
@@ -366,4 +375,46 @@ FIFO作为一种调度算法,十分的差劲.
 
 到了这里,我们还剩下一个问题:**OS不知道一个作业需要占用CPU多久,也不知道这个作业里有没有IO事件**.我们需要对这两个问题进行预测,预测的基础是最近一段时间各个作业的表现情况.
 
-# 5. chapter 8, Scheduling: The Multi-Level Feedback Queue
+## 1.5. chapter 8, Scheduling: The Multi-Level Feedback Queue
+
+这里,不再按照书本的顺序来介绍,毕竟循序渐进的章节安排太费文字了.而且,我并不是操作系统设计者,我只是想了解操作系统.
+
+MultiyLevelFeedbackQueue的设计思想主要是:
+* 提高作业的turnaround time
+* 重视OS与用户的交互
+
+MLFQ比之前介绍的调度算法要复杂一些,它设置了多个不同优先级的队列,作业的优先级越高,越可能获得CPU时间.同时,所有作业的优先级都有下降的趋势,会随着作业的行为(使用CPU情况,使用IO情况)来调整.IO密集型的作业优先级较高,CPU密集型较低,但高优先级获得的时间片比低优先级短.
+
+再简单列举下MLFQ的basic rules:
+* 如果作业A的优先级高于作业B,那么A获得CPU,B不能获得CPU.
+* 如果A和B的优先级相同,那么A和B采用Round Robin方法来调度,即依次执行.
+* 当一个作业刚刚被提交到操作系统,那么它具有最高优先级.
+* 如果一个作业在当前优先级运行的时间超过该优先级允许的上限,那么无论这个作业最近的行为如何,都会下降一个优先级(防止程序性行为欺骗).
+* 每过一段时间,所有作业的优先级全部置为最高(重新洗牌,避免"  阶级固化",低优先级任务一直starving)
+
+## 1.6. chapter 9, Scheduling: Proportional Share
+
+ProportionalShare 的设计思想是**注重fiarness**,即**保证每个作业能够获得一定百分比的CPU使用机会**.
+
+ProportionalShare引进了一个tickets
+的概念.每个作业持有一定量的tickets,tickets越多,获得CPU使用权的**机会越大**(不是说一定会获得CPU,只是概率大).ticekts的维护机制很像货币,主要有三个性质:
+* ticket currency  
+    每个用户持有一定通用的tickets,但却可以分配给自己的作业任意数量的tickets(非通用).这样,用户的每个作业都可以按比例兑换非荣用tickets和通用tickets,最后根据通用tickets来决定谁获得CPU使用权.
+* ticket transfer
+    作业持有一定的ticket,并且可以转移ticket给其他作业.这在某些情况下非常有用:C/S架构中,Client向Server发起一个请求,要求一些操作,为了提高Server运行效率,Client可以把自己的tickets转交给Server,请求执行完毕后再拿回tickets.
+* ticket inflation
+    某些情形下,如果作业之间互相**信任**,允许一些作业在需要时,临时提高自己的ticket持有量,从而获取更多的CPU占用机会.
+
+这种类似货币发行的调度策略,给了调度很大的灵活性.一个job可以改变自己获取CPU的机会;同时,这种依赖随机性的调度只需要一个合格的随机数生成器,以及一个好的数据结构,就很容易实现出来.
+
+## 1.7. chapter 10, Multiprocessor Scheduling
+
+这部分延后在看,先看看内存虚拟化和并发相关章节.
+
+# 2. Memory VIrtualization
+
+在CPU虚拟化成功后,我们可以让多个进程轮流执行,只要我们能够做好上下文切换.但是,保存恢复CPU状态很快,内存的保存恢复却非常慢.所以我们有了这样的需求:能不能不保存恢复进程内存,不把他们保存到磁盘又重新加载到内存?如果条件允许,内存够大,就可以避免相当多的保存恢复工作.当然,这一切还需要对进程内存的保护:保护它不被其他进程篡改.
+
+所以,我们需要一种能够不保存恢复进程内存,同时可以对进程内存提供保护的机制.
+
+## 2.1. chapter 13, The Abstraction:Address Spaces
