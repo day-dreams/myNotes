@@ -34,6 +34,11 @@ Operating Systems: Three Easy Pieces
     - [1.7. chapter 10, Multiprocessor Scheduling](#17-chapter-10-multiprocessor-scheduling)
 - [2. Memory VIrtualization](#2-memory-virtualization)
     - [2.1. chapter 13, The Abstraction:Address Spaces](#21-chapter-13-the-abstractionaddress-spaces)
+    - [2.2. chapter 14, Interlude: Memory APU](#22-chapter-14-interlude-memory-apu)
+        - [2.2.1. malloc和free](#221-malloc和free)
+        - [2.2.2. mmap(占坑)](#222-mmap占坑)
+    - [2.3. chapter 15, Mechanism: Address Translation](#23-chapter-15-mechanism-address-translation)
+        - [2.3.1. base and bounds](#231-base-and-bounds)
 
 <!-- /TOC -->
 
@@ -418,3 +423,52 @@ ProportionalShare引进了一个tickets
 所以,我们需要一种能够不保存恢复进程内存,同时可以对进程内存提供保护的机制.
 
 ## 2.1. chapter 13, The Abstraction:Address Spaces
+
+地址空间是OS抽象出的一层概念,它隐藏了硬件地址的丑陋细节,只留给程序美丽的假象.这种抽象让程序误以为自己**独享**一个**完整**的物理地址.程序将基于这个地址空间安排自己的内存结构:stack,heap,code等.
+
+程序只能接触到虚拟地址,而**虚拟地址到物理地址的转换**由操作系统和硬件共同完成.
+
+这种抽象机制的目标有三点:
+* 对进程透明  
+    进程并不知道自己所谓的地址空间是假的.实际上,操作系统和硬件一起完成了底层的工作.
+* 高效  
+    这种机制必须尽可能的高效,所以某些工作交由硬件来完成.
+* 保护  
+    操作系统必须对每个进程的地址空间进行保护,让每个进程无法接触到不属于自己的物理地址.这既是保护用户进程互相干扰,也是保护操作系统的代码和数据不被篡改.
+
+## 2.2. chapter 14, Interlude: Memory APU
+
+显然,程序可以操作的内存大致分为stack和heap.所以需要有一些API来完成对stack和heap的操作.
+
+### 2.2.1. malloc和free
+
+这里没什么好说的,C/C++已经学的够多了.只想着重记录两个点
+* malloc需要指定内存大小,free却不需要  
+    这是因为操作系统在底层记录了每个malloc分配的内存块大小,所以free的时候不需要接受大小参数
+* malloc和free不是系统调用  
+    这一点可以从man page反映出来.malloc和free等内存分配函数在page 3(library calls),而不是在page 2(system calls).但是,malloc等内存管理函数依赖于系统调用brk和sbrk.
+
+### 2.2.2. mmap(占坑)
+
+这是个神奇的函数,可以用来实现进程间内存共享,也可以用来操作文件(特别是文件比内存还大的时候).具体细节现在不研究,先占坑吧.
+
+## 2.3. chapter 15, Mechanism: Address Translation
+
+在chapter13,我们提到了进程地址空间到物理地址的转换.这个转换由操作系统和硬件共同完成.这个转换机制的设计强调三点:
+* 效率
+* 掌控能力
+* 灵活性
+
+我们先来看看一种地址转换机制:base and bounds
+
+### 2.3.1. base and bounds
+
+base and bounds一般叫做Dynamic Relocation.Dynamic Relocation基于一对硬件设备:base,bounds.
+
+进程的地址空间要映射到硬件地址,必须有某种计算方法,Dynamic Relocation采取的计算方式是:**PhysicalAddr=BaseAddr+VirtualAddr**.
+
+每个进程控制块PCB都会维护属于自己的base和bounds,base用于记录BaseAddr,bounds用来记录该进程地址空间的大小.如果进程访问一个地址时,给出的虚拟地址超出了bounds(试图访问不属于自己的物理地址),就会触发一些异常,操作系统会对这个进程进行处理(一般是kill掉).
+
+对于base and bounds机制,每个进程拥有相同大小的地址空间,无论是否被进程使用,都会被映射到物理地址.这也带来了一个问题:internal fragment,即stack和heap反向生长,二者之间会存在较大的空闲内存块.
+
+base和bounds实际是CPU中的一对寄存器,每个CPU都有一对.为了进行地址转换,每个CPU也需要一个MMU(Memory Management Unit),来负责具体的地址计算.
