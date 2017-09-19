@@ -39,6 +39,11 @@ Operating Systems: Three Easy Pieces
         - [2.2.2. mmap(占坑)](#222-mmap占坑)
     - [2.3. chapter 15, Mechanism: Address Translation](#23-chapter-15-mechanism-address-translation)
         - [2.3.1. base and bounds](#231-base-and-bounds)
+    - [2.4. chapter 16, Segmentation](#24-chapter-16-segmentation)
+        - [2.4.1. 优缺点](#241-优缺点)
+        - [2.4.2. compact](#242-compact)
+        - [2.4.3. free-list management](#243-free-list-management)
+    - [2.5. chapter 17, Free-Space Management](#25-chapter-17-free-space-management)
 
 <!-- /TOC -->
 
@@ -469,6 +474,61 @@ base and bounds一般叫做Dynamic Relocation.Dynamic Relocation基于一对硬�
 
 每个进程控制块PCB都会维护属于自己的base和bounds,base用于记录BaseAddr,bounds用来记录该进程地址空间的大小.如果进程访问一个地址时,给出的虚拟地址超出了bounds(试图访问不属于自己的物理地址),就会触发一些异常,操作系统会对这个进程进行处理(一般是kill掉).
 
-对于base and bounds机制,每个进程拥有相同大小的地址空间,无论是否被进程使用,都会被映射到物理地址.这也带来了一个问题:internal fragment,即stack和heap反向生长,二者之间会存在较大的空闲内存块.
+对于base and bounds机制,每个进程拥有相同大小的地址空间,无论是否被进程使用,都会被映射到物理地址.这也带来了一个问题:**internal fragment**,即stack和heap反向生长时,二者之间会存在较大的空闲内存块浪费.
 
 base和bounds实际是CPU中的一对寄存器,每个CPU都有一对.为了进行地址转换,每个CPU也需要一个MMU(Memory Management Unit),来负责具体的地址计算.
+
+这里再放一个图:只有单个进程存在的内存物理地址分布情况.图中not use的部分可以继续分配给其他进程.
+
+![Physical Memory with a Single Relocated Process](./base-and-bounds.png)
+
+## 2.4. chapter 16, Segmentation
+
+终于,遇到了这个见过很多次但没有明白前因后果的东西:分段.
+
+分段的意义在与解决base and bounds的问题:internal fragment问题.如果我们不把进程的地址空间映射到整块连续的内存,而是把进程地址空间的不同部分分开映射,就避免了internal fragment问题.每个进程对应多个段,并且PCB维护每个段的<base,bounds>组合,就可以实现地址转换的问题.
+
+这里放上一个图,可以看到,code,stack,heap被分散开来,之间空闲的物理地址还可以分配给其他进程的code,stack,heap段.
+
+![segment](./segmentation.png)
+
+
+### 2.4.1. 优缺点
+
+先说优点:  
+* 允许不同进程共享某些段(比如代码段)  
+* 可以扩展段的数量(不只是code,stack,heap,还有更多),带来更加灵活的控制能力.  
+
+也带来了一些问题:
+* 需要设置一些保护措施  
+    既然有进程间的段共享,就需要设置保护措施,给予不同段不同的读写执行权限.
+* 需要考虑到stack和heap等段的地址转换方式不同  
+    stack和heap的增长方向不同,物理地址计算方式也不同,需要设置额外的方向字段来提示每个段的地址转换方法.
+* 如何区分地址属于哪个段  
+    有两种解决方法
+    * implicit way:如果地址来自与PC,那么是代码段;如果来自与base pionter或stack pointer,那么是stack段;等等
+    * explicit way:将地址空间的前几位作为一个片选信号,来选择不同的段.
+
+
+我们通过增加段的属性寄存器来解决.之前段的属性只有base,bounds,现在再加入protection和grow等字段.举例如下: 
+ 
+![segment properties](./segment-properties.png)
+
+最后说说缺点.虽然segmentation规避了internal fragments的问题,但也带来了e**xternal fragments**问题:**段的物理地址分布过于分散,导致没有足够打的空间供各个进程的堆栈段生长**.
+
+这个问题的解决办法有两个.
+### 2.4.2. compact
+通过重新组织段的分布,来使物理地址一定程度紧凑,从而空出大片的free space来分配新进程的段,并给堆栈生长空间.
+
+示意图如下:左边是没有经过compact的物理内存,导致难以给新进程的段分配空间;右边是经过compact的物理内存,有大块连续的free space.
+
+![compact](./compact-or-not.png)
+
+当然这也有很大的问题,compact的开销:差不多要包含复制移动等系列内存操作,在OS接管CPU发现需要compact后,花费在compact的时间相对每个进程获取的time slice还是长的多的.
+
+
+### 2.4.3. free-list management
+
+通过比较好的分配算法,尽量保持有大片连续的free space.这样的算法很多,但遗憾的是,都或多或少有些缺点,所以目前并没有什么特别好的算法能解决这个问题.
+
+## 2.5. chapter 17, Free-Space Management
