@@ -1,14 +1,16 @@
 import socket
-
+import time
 s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM, proto=0)
 
 
-s.bind(("0.0.0.0", 9999))
+s.bind(("0.0.0.0", 10000 + 1 + 1 + 1 + 1))
 
 s.listen(5)
 
 client, addr = s.accept()
 
-request = client.recv(4)
+time.sleep(3)
 
-print "[", request, "]"
+for _ in range(30):
+    request = client.recv(10)
+    print "[", request, "]"
