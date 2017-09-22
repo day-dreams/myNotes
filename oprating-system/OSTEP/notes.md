@@ -44,14 +44,18 @@ Operating Systems: Three Easy Pieces
         - [2.4.2. compact](#242-compact)
         - [2.4.3. free-list management](#243-free-list-management)
     - [2.5. chapter 17, Free-Space Management](#25-chapter-17-free-space-management)
-    - [chapter 18, Paging: Introduction](#chapter-18-paging-introduction)
-        - [PageTables](#pagetables)
-            - [地址结构:VirtualPageNumber+Offset](#地址结构virtualpagenumberoffset)
-            - [PageTableEntry(PTE)](#pagetableentrypte)
-        - [缺点:too much memory](#缺点too-much-memory)
-        - [缺点:run slowly](#缺点run-slowly)
-    - [chapter 19, Paging: Faster Translations(TLBS)](#chapter-19-paging-faster-translationstlbs)
-    - [chapter 20, Paging: Smaller Tables](#chapter-20-paging-smaller-tables)
+    - [2.6. chapter 18, Paging: Introduction](#26-chapter-18-paging-introduction)
+        - [2.6.1. PageTables](#261-pagetables)
+            - [2.6.1.1. 地址结构:VirtualPageNumber+Offset](#2611-地址结构virtualpagenumberoffset)
+            - [2.6.1.2. PageTableEntry(PTE)](#2612-pagetableentrypte)
+        - [2.6.2. 缺点:too much memory](#262-缺点too-much-memory)
+        - [2.6.3. 缺点:run slowly](#263-缺点run-slowly)
+    - [2.7. chapter 19, Paging: Faster Translations(TLBS)](#27-chapter-19-paging-faster-translationstlbs)
+    - [2.8. chapter 20, Paging: Smaller Tables](#28-chapter-20-paging-smaller-tables)
+        - [2.8.1. Larger Page Size](#281-larger-page-size)
+        - [2.8.2. Paging and Segments](#282-paging-and-segments)
+        - [2.8.3. Multi-level Page Tables](#283-multi-level-page-tables)
+        - [2.8.4. INverted Page Tables](#284-inverted-page-tables)
 
 <!-- /TOC -->
 
@@ -543,7 +547,7 @@ base和bounds实际是CPU中的一对寄存器,每个CPU都有一对.为了进�
 
 暂时跳过,不想了解分段方面的细节.一方面,linux主要是分页;另一方面,正在学的8086抽象层次还在OS之下,所以暂时没有必要学习.
 
-## chapter 18, Paging: Introduction
+## 2.6. chapter 18, Paging: Introduction
 
 首先回顾分段机制的问题:段的组织方式不够灵活(需要额外的算法来实现malloc,free等内存分配函数),空间浪费(external fragment导致部分空间无法利用).所以我们决定使用新的方法来解决内存虚拟化(目的是让进程以为自己独享整个地址空间,以允许多进程在内存中共存,从而以较小的代价实现进程调度中的上下文切换).
 
@@ -553,13 +557,13 @@ Paging总的来说就是,将实际的物理内存和进程的地址空间分成�
 
 ![introduce-paging](./introduce-paging.png)
 
-### PageTables
+### 2.6.1. PageTables
 
 值得注意的是上文提到的地址转换工作,需要一个数据结构来记录进程地址空间里的虚拟页和物理内存的page frame的对应关系.
 
 如果不引入更多的机制,使用arrays来存储映射关系,即pagetable,一个32位的地址空间空间需要多大存储空间来存储映射关系呢?
 
-#### 地址结构:VirtualPageNumber+Offset
+#### 2.6.1.1. 地址结构:VirtualPageNumber+Offset
 
 先看地址结构.以这个图为例.
 
@@ -567,7 +571,7 @@ Paging总的来说就是,将实际的物理内存和进程的地址空间分成�
 
 地址结构分为VPN(VirtualPageNumber)和offset,相信不难理解.VPN经过地址翻译(借助PageTables)后,得到物理page fram的标号,和offset结合成为实际物理地址.
 
-#### PageTableEntry(PTE)
+#### 2.6.1.2. PageTableEntry(PTE)
 
 PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个PageTableEntry(PTE).PTE不仅要记录物理page frame的编号,还需要用一些bits来维护这个页的读写权限等信息.下面是一些需要维护的信息:
 
@@ -580,11 +584,11 @@ PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个Page
 
 ![](./x86-vaddr.png)
 
-### 缺点:too much memory
+### 2.6.2. 缺点:too much memory
 
 按照上面的例子,通过一些计算,一个32位地址空间需要使用4MB大小的空间来维护page table.如果有100个进程,就需要400MB来维护!!!
 
-### 缺点:run slowly
+### 2.6.3. 缺点:run slowly
 
 这里放个图,反映具体的地址翻译过程.
 
@@ -596,8 +600,52 @@ PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个Page
 
 
 
-## chapter 19, Paging: Faster Translations(TLBS)
+## 2.7. chapter 19, Paging: Faster Translations(TLBS)
 
-这一章,我们来解决run slowly 的问题.
+这一章,我们来解决run slowly 的问题.Paging的速度慢就慢在每次访问内存都需要重新计算物理页的位置,我们很容易想到引入cache来改善这个问题.
 
-## chapter 20, Paging: Smaller Tables
+根据程序执行的连续性:
+* 相邻指令访问的内存也可能相邻
+* 当前使用的内存在将来也会被使用
+
+我们引入cache:每次VPN到PFN的计算都被保存到cache中,当新的访存进行时,我们先检查cache里是否有这个VPN对应的PFN,如果有(cache hit),就直接使用;如果没有(cache miss),就执行负担较大的计算工作,将计算结果(VPN到PFN的映射)存入cache中后,再次尝试访存指令.这就是**Translation Look-aside Buffer**机制.
+
+由于真实环境中,指令执行对于内存的访问确实有一定的连续性,cache会带来显著的性能提升.
+
+这是Traslation Look-aside Buffer的算法示意:
+
+![](./TLB.png)
+
+Traslation Look-adise Buffer 维护的内容大致如下图:
+
+![](./TLB-table.png)
+
+* valid字段  
+    用来表示这个映射是否合法.
+* prot  
+    记录这个页的权限
+* ASID  
+    AddressSpaceIdentifier,类似与进程的PID,用来标记不同进程的地址空间.这个字段也间接支持了不同进程的地址空间里不同虚拟页共享同一个物理页.
+    ![](./PF-sharing.png)
+
+## 2.8. chapter 20, Paging: Smaller Tables
+
+现在来改善原始Paging机制的另一缺点:PageTable占用空间过大.有几种方法可以一定程度上进行改善.
+
+### 2.8.1. Larger Page Size
+
+如果page size更大,地址空间不变,可以减少page table的大小.
+
+但当page size变大,就会出现像分段中出现过的那种internal fragments问题.
+
+### 2.8.2. Paging and Segments
+
+这种分段和分页结合的方式也很自然,目的是为了避免:为进程地址空间中未使用的部分维护page table entry.从而只维护使用了的那部分虚拟页的物理页映射关系.
+
+这种combination会为每个进程的每个段维护一个base register,指向段的page table.地址空间里的段被映射到物理内存的不同物理页中.
+
+但是,每个段的page table大小不一样,就难以安排所有的段在物理内存上的分布情况,伴随出现的就是external framents的问题.
+
+### 2.8.3. Multi-level Page Tables
+
+### 2.8.4. INverted Page Tables
