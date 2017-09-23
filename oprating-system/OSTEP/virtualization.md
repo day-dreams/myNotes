@@ -1,5 +1,8 @@
 Operating Systems: Three Easy Pieces
 =====================================
+
+这是OSTEP的虚拟化部分章节的笔记.
+
 <!-- TOC -->
 
 - [1. CPU Virtualization](#1-cpu-virtualization)
@@ -43,19 +46,18 @@ Operating Systems: Three Easy Pieces
         - [2.4.1. 优缺点](#241-优缺点)
         - [2.4.2. compact](#242-compact)
         - [2.4.3. free-list management](#243-free-list-management)
-    - [2.5. chapter 17, Free-Space Management](#25-chapter-17-free-space-management)
-    - [2.6. chapter 18, Paging: Introduction](#26-chapter-18-paging-introduction)
-        - [2.6.1. PageTables](#261-pagetables)
-            - [2.6.1.1. 地址结构:VirtualPageNumber+Offset](#2611-地址结构virtualpagenumberoffset)
-            - [2.6.1.2. PageTableEntry(PTE)](#2612-pagetableentrypte)
-        - [2.6.2. 缺点:too much memory](#262-缺点too-much-memory)
-        - [2.6.3. 缺点:run slowly](#263-缺点run-slowly)
-    - [2.7. chapter 19, Paging: Faster Translations(TLBS)](#27-chapter-19-paging-faster-translationstlbs)
-    - [2.8. chapter 20, Paging: Smaller Tables](#28-chapter-20-paging-smaller-tables)
-        - [2.8.1. Larger Page Size](#281-larger-page-size)
-        - [2.8.2. Paging and Segments](#282-paging-and-segments)
-        - [2.8.3. Multi-level Page Tables](#283-multi-level-page-tables)
-        - [2.8.4. INverted Page Tables](#284-inverted-page-tables)
+    - [2.5. chapter 18, Paging: Introduction](#25-chapter-18-paging-introduction)
+        - [2.5.1. PageTables](#251-pagetables)
+            - [2.5.1.1. 地址结构:VirtualPageNumber+Offset](#2511-地址结构virtualpagenumberoffset)
+            - [2.5.1.2. PageTableEntry(PTE)](#2512-pagetableentrypte)
+        - [2.5.2. 缺点:too much memory](#252-缺点too-much-memory)
+        - [2.5.3. 缺点:run slowly](#253-缺点run-slowly)
+    - [2.6. chapter 19, Paging: Faster Translations(TLBS)](#26-chapter-19-paging-faster-translationstlbs)
+    - [2.7. chapter 20, Paging: Smaller Tables](#27-chapter-20-paging-smaller-tables)
+        - [2.7.1. Larger Page Size](#271-larger-page-size)
+        - [2.7.2. Paging and Segments](#272-paging-and-segments)
+        - [2.7.3. Multi-level Page Tables](#273-multi-level-page-tables)
+        - [2.7.4. INverted Page Tables](#274-inverted-page-tables)
 
 <!-- /TOC -->
 
@@ -543,11 +545,8 @@ base和bounds实际是CPU中的一对寄存器,每个CPU都有一对.为了进�
 
 通过比较好的分配算法,尽量保持有大片连续的free space.这样的算法很多,但遗憾的是,都或多或少有些缺点,所以目前并没有什么特别好的算法能解决这个问题.
 
-## 2.5. chapter 17, Free-Space Management
 
-暂时跳过,不想了解分段方面的细节.一方面,linux主要是分页;另一方面,正在学的8086抽象层次还在OS之下,所以暂时没有必要学习.
-
-## 2.6. chapter 18, Paging: Introduction
+## 2.5. chapter 18, Paging: Introduction
 
 首先回顾分段机制的问题:段的组织方式不够灵活(需要额外的算法来实现malloc,free等内存分配函数),空间浪费(external fragment导致部分空间无法利用).所以我们决定使用新的方法来解决内存虚拟化(目的是让进程以为自己独享整个地址空间,以允许多进程在内存中共存,从而以较小的代价实现进程调度中的上下文切换).
 
@@ -557,13 +556,13 @@ Paging总的来说就是,将实际的物理内存和进程的地址空间分成�
 
 ![introduce-paging](./introduce-paging.png)
 
-### 2.6.1. PageTables
+### 2.5.1. PageTables
 
 值得注意的是上文提到的地址转换工作,需要一个数据结构来记录进程地址空间里的虚拟页和物理内存的page frame的对应关系.
 
 如果不引入更多的机制,使用arrays来存储映射关系,即pagetable,一个32位的地址空间空间需要多大存储空间来存储映射关系呢?
 
-#### 2.6.1.1. 地址结构:VirtualPageNumber+Offset
+#### 2.5.1.1. 地址结构:VirtualPageNumber+Offset
 
 先看地址结构.以这个图为例.
 
@@ -571,7 +570,7 @@ Paging总的来说就是,将实际的物理内存和进程的地址空间分成�
 
 地址结构分为VPN(VirtualPageNumber)和offset,相信不难理解.VPN经过地址翻译(借助PageTables)后,得到物理page fram的标号,和offset结合成为实际物理地址.
 
-#### 2.6.1.2. PageTableEntry(PTE)
+#### 2.5.1.2. PageTableEntry(PTE)
 
 PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个PageTableEntry(PTE).PTE不仅要记录物理page frame的编号,还需要用一些bits来维护这个页的读写权限等信息.下面是一些需要维护的信息:
 
@@ -584,11 +583,11 @@ PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个Page
 
 ![](./x86-vaddr.png)
 
-### 2.6.2. 缺点:too much memory
+### 2.5.2. 缺点:too much memory
 
 按照上面的例子,通过一些计算,一个32位地址空间需要使用4MB大小的空间来维护page table.如果有100个进程,就需要400MB来维护!!!
 
-### 2.6.3. 缺点:run slowly
+### 2.5.3. 缺点:run slowly
 
 这里放个图,反映具体的地址翻译过程.
 
@@ -600,7 +599,7 @@ PageTable中记录每个虚拟页的具体情况,每个虚拟页对应一个Page
 
 
 
-## 2.7. chapter 19, Paging: Faster Translations(TLBS)
+## 2.6. chapter 19, Paging: Faster Translations(TLBS)
 
 这一章,我们来解决run slowly 的问题.Paging的速度慢就慢在每次访问内存都需要重新计算物理页的位置,我们很容易想到引入cache来改善这个问题.
 
@@ -628,17 +627,17 @@ Traslation Look-adise Buffer 维护的内容大致如下图:
     AddressSpaceIdentifier,类似与进程的PID,用来标记不同进程的地址空间.这个字段也间接支持了不同进程的地址空间里不同虚拟页共享同一个物理页.
     ![](./PF-sharing.png)
 
-## 2.8. chapter 20, Paging: Smaller Tables
+## 2.7. chapter 20, Paging: Smaller Tables
 
 现在来改善原始Paging机制的另一缺点:PageTable占用空间过大.有几种方法可以一定程度上进行改善.
 
-### 2.8.1. Larger Page Size
+### 2.7.1. Larger Page Size
 
 如果page size更大,地址空间不变,可以减少page table的大小.
 
 但当page size变大,就会出现像分段中出现过的那种internal fragments问题.
 
-### 2.8.2. Paging and Segments
+### 2.7.2. Paging and Segments
 
 这种分段和分页结合的方式也很自然,目的是为了避免:为进程地址空间中未使用的部分维护page table entry.从而只维护使用了的那部分虚拟页的物理页映射关系.
 
@@ -646,6 +645,38 @@ Traslation Look-adise Buffer 维护的内容大致如下图:
 
 但是,每个段的page table大小不一样,就难以安排所有的段在物理内存上的分布情况,伴随出现的就是external framents的问题.
 
-### 2.8.3. Multi-level Page Tables
+### 2.7.3. Multi-level Page Tables
 
-### 2.8.4. INverted Page Tables
+多级分页在目前的操作系统中十分流行,如Linux在大多数平台上都采用多级分页的机制,64位似乎采用4级分页,32位采用2级分页.所有进程的page table大概占用1%的内存.下面的代码截图来自于linux源码(应该是4.7版本)
+
+![](./page-level.png)
+
+多级分页的核心思想是:将PageTable分为一系列连续的units,每个units称为page of pages.如果一个unit管辖下的所有page都没有被进程使用(VPN不合法),那么将该unit标记为invalid,并且不为这个unit维护下一级(第二级)PageTable;否则,维护这个unit的下一级PageTable.这样,如果出现大批进程没有使用的虚拟页,就不需要维护他们的page table entry.一般的进程地址空间里大部分是空闲的,也很少出现那种占用上个g的进程,所以可以很大幅度缩小每个进程的PageTable的体积.
+
+在一个两级分页机制中,第一级PageTable叫做PageDirectory,第二级叫做PageTable.示意图如下:
+
+![](./multi-level-page.png)
+
+相应的,地址空间的地址被进一步细分,地址前几位用来表明第一级page,接着的几位用来表明第二级,.....,直到最后的几位用来表示offset.示意图如下:
+
+![](./multi-level-page-address.png)
+
+进程访问内存时地址转换的过程大致如下:
+
+![](./multi-level-page-table-control-flow.png)
+
+### 2.7.4. INverted Page Tables
+
+还有另一种减小PageTable体积的方法:逆向建立PageTable,只维护被分配出去的物理页到各进程地址空间的虚拟页的映射.
+
+但是显然带来了地址转换时的不便:必须在线性表里扫描,找到需要访问的page table entry.
+
+
+-----------------------------------------------------------------
+
+虚拟化部分暂时看这么多,剩下的章节有:
+* 10, Multiprocessor Scheduling
+* 17, Free-Sapce Management
+* 21, Beyond Physical Memory:Mechanisms
+* 22, Beyond Physical Memory:Policies
+* 23, The VAX/VMS Virtual Memory System
