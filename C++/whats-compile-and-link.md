@@ -63,7 +63,10 @@
    int fun(int)|\_Z3funi  |?fun@@YAHH@Z |
    float fun(int)|\_Z3funf|?fun@@YAMH@Z|
    int moon::fun(float)|\_ZN4moon3funi|?fun@moon@@AAEHM@Z|
-   float moon::my_function::fun(int)|\_ZN4moonN11my_function3funf|?fun@moon@my_function@@AAEHH@Z|  
+   float moon::my_function::fun(int)|\_ZN4moonN11my_function3funf|?fun@moon@my_function@@AAEHH@Z|
+
+
+   
    其实，如果能看懂这张表格，再遇到编译器报链接错误应该就能猜出来错误处在哪里。windows下的c++环境并不友善，虽然有强大的VS支撑 ，隐藏了很多底层的细节，但正因为如此，出错的时候才不好解决。特别是当你看到VS报出那一大堆链接错误时，密密麻麻的符号挤在那么小的窗口里，字体又小，连仔细看的欲望都没有。
    我遇到的链接错误有两种，一种是自己的代码不规范，声明和定义不分，还有一种是库文件没有设置好，很多符号都加载不出来。
 
