@@ -257,6 +257,10 @@ void unlock(lock_t *mutex){
 
 Linux也有类似的机制,比如futex_wait,futex_wake.这个机制在```lowlevellock.h```中有体现.值得一提的是,futex.h等相关文件中,大量使用汇编来实现锁,为的就是减小中断的影响.Linux源代码中也有spinlock.c,有空可以看看[kernel/locking/spinlock.c](https://github.com/torvalds/linux/blob/master/kernel/locking/spinlock.c),里面太多的宏定义,还涉及到多核CPU的情形.
 
+这里放张图,linux-2.6版本的spinlock_t
+
+![spinlock_t](./linux-spinlock-v2.6.png)
+
 ## 3.8. 第六种实现:Two Phase Locks(Linux)
 
 这种锁对于spin-wait的理解不同,它认为spin-wait是有用的.直接避免spin-wait是不对的,相反,应该先尝试spin-wait一段时间,再进入block状态.
