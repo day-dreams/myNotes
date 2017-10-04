@@ -19,6 +19,15 @@ Operating Systems: Three Easy Pieces
     - [3.6. 第四种实现:TicketLock,Fetch and Add](#36-第四种实现ticketlockfetch-and-add)
     - [3.7. 第五种实现:Using Queues,Sleeping Instead Of Spinning(Solaris,Linux)](#37-第五种实现using-queuessleeping-instead-of-spinningsolarislinux)
     - [3.8. 第六种实现:Two Phase Locks(Linux)](#38-第六种实现two-phase-lockslinux)
+- [4. chapter 29, Lock-based Concurrent Data Structures](#4-chapter-29-lock-based-concurrent-data-structures)
+    - [Concurrent Counters(traditional or sloppy)](#concurrent-counterstraditional-or-sloppy)
+    - [Concurrent Lists(traditional or hand-over-hand)](#concurrent-liststraditional-or-hand-over-hand)
+    - [Concurrent Queues(traditional or head-and-tail)](#concurrent-queuestraditional-or-head-and-tail)
+    - [Concurrent Hash Table(traditional or lock-per-bucket)](#concurrent-hash-tabletraditional-or-lock-per-bucket)
+- [5. chapter 30, Condition Variables](#5-chapter-30-condition-variables)
+- [6. chapter 31, Semaphores](#6-chapter-31-semaphores)
+- [7. Common Concurrency Problems](#7-common-concurrency-problems)
+- [8. Event-based Concurrency](#8-event-based-concurrency)
 
 <!-- /TOC -->
 
@@ -266,3 +275,61 @@ Linux也有类似的机制,比如futex_wait,futex_wake.这个机制在```lowleve
 这种锁对于spin-wait的理解不同,它认为spin-wait是有用的.直接避免spin-wait是不对的,相反,应该先尝试spin-wait一段时间,再进入block状态.
 
 Linux的锁将loxk分为两段时期.第一段只是进入spin-wait,预定时间内还没获得锁就退出第一段,再次检查是否可以或的锁,如果可以就返回,否则进入第二段,陷入pack,等待被唤醒.
+
+# 4. chapter 29, Lock-based Concurrent Data Structures
+
+## Concurrent Counters(traditional or sloppy)
+
+Concurrent Counters就是一个支持并发的计数器.计数器可读可写,并且带有阻塞的锁操作.
+
+* Traditional Counters  
+    不同版本直接给count一个全局锁,所有线程试图操作该count时,都要lock该全局锁.这样就会造成几个线程等待一个线程的情况.注意,Linux采用的是二段锁实现,所以第一段的spin-wait是不可避免的,也就是说,多个线程操作一个锁时,无法避免的会出现等待时间浪费.  
+* Sloppy Counters   
+    SloppyCOunters引入了buffer的概念,每个线程维护一份全局counter的镜像,加减操作都直接操作这个镜像counter,只有加减操作到达了一定次数(threshold),或发生了对全局counter的read操作,才会试图获得全局锁,进行数据同步.这样大大减少了spin-wait的次数.
+
+这里有[两个实现](./examples/concurrent-counter),计算不同线程数下,每个线程执行相同counter add操作的总运行时间.sloppy版本的trenshold取为5.
+
+|线程数量|add次数|sloppy counter用时|traditional counter用时|
+|:-:|:-:|:-:|:-:|
+|1|10000000|0.130323|0.327724|
+|2|10000000|0.304245|2.70485 |
+|3|10000000|0.387101|3.58324 |
+|4|10000000|0.730623|6.92834 |
+|5|10000000|0.876632|8.56112|
+
+## Concurrent Lists(traditional or hand-over-hand)
+
+Concurrent List也差不多,可以通过全局锁的形式,提供并发支持.
+
+但全局锁的性能并不好.可以通过**hand-over-hand**的形式来提供更细粒度的并发支持.hand-over-hand就是给每个list元素提供一把锁,允许多个线程同时对list进行操作,当然,不能是同时对同一个元素进行操作.hand-over-hand也不足,因为需要考虑lock的空间负载,以及lock,operation,unlock的运行速度负载.
+
+**如果有一天需要造这种轮子,还是得先查查相关的论文**.
+
+## Concurrent Queues(traditional or head-and-tail)
+
+可以通过添加全局锁来实现,也可以通过头尾各一把来实现.后者的并发程度更高.
+
+## Concurrent Hash Table(traditional or lock-per-bucket)
+
+可以通过添加全局锁来实现,也可以通过每个bucket各一把来实现.后者的并发程度更高.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 5. chapter 30, Condition Variables
+
+# 6. chapter 31, Semaphores
+
+# 7. Common Concurrency Problems
+
+# 8. Event-based Concurrency
