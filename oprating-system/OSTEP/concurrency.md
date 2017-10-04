@@ -20,10 +20,10 @@ Operating Systems: Three Easy Pieces
     - [3.7. 第五种实现:Using Queues,Sleeping Instead Of Spinning(Solaris,Linux)](#37-第五种实现using-queuessleeping-instead-of-spinningsolarislinux)
     - [3.8. 第六种实现:Two Phase Locks(Linux)](#38-第六种实现two-phase-lockslinux)
 - [4. chapter 29, Lock-based Concurrent Data Structures](#4-chapter-29-lock-based-concurrent-data-structures)
-    - [Concurrent Counters(traditional or sloppy)](#concurrent-counterstraditional-or-sloppy)
-    - [Concurrent Lists(traditional or hand-over-hand)](#concurrent-liststraditional-or-hand-over-hand)
-    - [Concurrent Queues(traditional or head-and-tail)](#concurrent-queuestraditional-or-head-and-tail)
-    - [Concurrent Hash Table(traditional or lock-per-bucket)](#concurrent-hash-tabletraditional-or-lock-per-bucket)
+    - [4.1. Concurrent Counters(traditional or sloppy)](#41-concurrent-counterstraditional-or-sloppy)
+    - [4.2. Concurrent Lists(traditional or hand-over-hand)](#42-concurrent-liststraditional-or-hand-over-hand)
+    - [4.3. Concurrent Queues(traditional or head-and-tail)](#43-concurrent-queuestraditional-or-head-and-tail)
+    - [4.4. Concurrent Hash Table(traditional or lock-per-bucket)](#44-concurrent-hash-tabletraditional-or-lock-per-bucket)
 - [5. chapter 30, Condition Variables](#5-chapter-30-condition-variables)
 - [6. chapter 31, Semaphores](#6-chapter-31-semaphores)
 - [7. Common Concurrency Problems](#7-common-concurrency-problems)
@@ -278,7 +278,7 @@ Linux的锁将loxk分为两段时期.第一段只是进入spin-wait,预定时间
 
 # 4. chapter 29, Lock-based Concurrent Data Structures
 
-## Concurrent Counters(traditional or sloppy)
+## 4.1. Concurrent Counters(traditional or sloppy)
 
 Concurrent Counters就是一个支持并发的计数器.计数器可读可写,并且带有阻塞的锁操作.
 
@@ -297,7 +297,7 @@ Concurrent Counters就是一个支持并发的计数器.计数器可读可写,�
 |4|10000000|0.730623|6.92834 |
 |5|10000000|0.876632|8.56112|
 
-## Concurrent Lists(traditional or hand-over-hand)
+## 4.2. Concurrent Lists(traditional or hand-over-hand)
 
 Concurrent List也差不多,可以通过全局锁的形式,提供并发支持.
 
@@ -305,11 +305,11 @@ Concurrent List也差不多,可以通过全局锁的形式,提供并发支持.
 
 **如果有一天需要造这种轮子,还是得先查查相关的论文**.
 
-## Concurrent Queues(traditional or head-and-tail)
+## 4.3. Concurrent Queues(traditional or head-and-tail)
 
 可以通过添加全局锁来实现,也可以通过头尾各一把来实现.后者的并发程度更高.
 
-## Concurrent Hash Table(traditional or lock-per-bucket)
+## 4.4. Concurrent Hash Table(traditional or lock-per-bucket)
 
 可以通过添加全局锁来实现,也可以通过每个bucket各一把来实现.后者的并发程度更高.
 
