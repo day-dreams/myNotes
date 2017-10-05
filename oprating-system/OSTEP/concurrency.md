@@ -9,8 +9,8 @@ Operating Systems: Three Easy Pieces
     - [1.1. threads](#11-threads)
     - [1.2. Shared Data](#12-shared-data)
     - [1.3. Atomicity](#13-atomicity)
-- [2. Interlude: Thraed API](#2-interlude-thraed-api)
-- [3. Locks](#3-locks)
+- [2. chapter 27, Interlude: Thraed API](#2-chapter-27-interlude-thraed-api)
+- [3. chapter 28, Locks](#3-chapter-28-locks)
     - [3.1. Locks:The Basic Idea](#31-locksthe-basic-idea)
     - [3.2. Evaluating Locks](#32-evaluating-locks)
     - [3.3. 第一种实现:Contorlling Interrupts](#33-第一种实现contorlling-interrupts)
@@ -25,6 +25,14 @@ Operating Systems: Three Easy Pieces
     - [4.3. Concurrent Queues(traditional or head-and-tail)](#43-concurrent-queuestraditional-or-head-and-tail)
     - [4.4. Concurrent Hash Table(traditional or lock-per-bucket)](#44-concurrent-hash-tabletraditional-or-lock-per-bucket)
 - [5. chapter 30, Condition Variables](#5-chapter-30-condition-variables)
+    - [5.1. pthread_cond_wait,pthread_cond_signal,pthread_cond_broadcast](#51-pthread_cond_waitpthread_cond_signalpthread_cond_broadcast)
+        - [5.1.1. Mesa Semantics,Hoare Semantics](#511-mesa-semanticshoare-semantics)
+        - [5.1.2. 为什么wait需要传递一个mutex作为参数?](#512-为什么wait需要传递一个mutex作为参数)
+        - [5.1.3. 已经有了pthread_cond_signal机制(在C++中反映为notify()),为什么需要一个状态变量,来反映条件成立?](#513-已经有了pthread_cond_signal机制在c中反映为notify为什么需要一个状态变量来反映条件成立)
+        - [5.1.4. 为什么使用while而不是if来检测条件?](#514-为什么使用while而不是if来检测条件)
+    - [5.2. 生产消费问题](#52-生产消费问题)
+        - [5.2.1. 为什么不使用lock](#521-为什么不使用lock)
+        - [5.2.2. 为什么使用两个condvar](#522-为什么使用两个condvar)
 - [6. chapter 31, Semaphores](#6-chapter-31-semaphores)
 - [7. Common Concurrency Problems](#7-common-concurrency-problems)
 - [8. Event-based Concurrency](#8-event-based-concurrency)
@@ -68,7 +76,7 @@ thread 虽然带来了一种更轻便的CPU虚拟化,但也带来了一些问题
     同步原语.由硬件和操作系统共同提供的机制,确保代码的原子性.
 
 
-# 2. Interlude: Thraed API
+# 2. chapter 27, Interlude: Thraed API
 
 全是基本的api使用,跳过本章大部分内容.只留下一个Thread API Guidelines,这里摘录几条.
 
@@ -76,7 +84,7 @@ thread 虽然带来了一种更轻便的CPU虚拟化,但也带来了一些问题
 * 减少线程间的交互!
 * 尽量减少共享变量的使用!
 
-# 3. Locks
+# 3. chapter 28, Locks
 
 这一章主要是关于同步锁及其实现.
 
@@ -89,7 +97,7 @@ thread 虽然带来了一种更轻便的CPU虚拟化,但也带来了一些问题
     线程之间存在依赖关系,如输入线程和计算线程和输出线程.
 * 互斥  
     多个线程试图进入同一个临界区,会发生data race.
-* 没关系
+* 没关系  
     完全不存在关系.
 
 最后一种忽略不计,我们需要一种来控制线程间同步互斥关系的工具,也就是**锁**.当线程要进入临界区,必须先打开一把(也可能是多把)锁,如果锁打不开,就不能进入.当然,锁只能被打开一次,直到打开锁的线程重新施放了锁,这把锁才能被重新打开.锁(Lock)只是借用了我们生活中常说的锁的概念而已,工作原理则不同.Lock一般具有两种操作:acquire/release,也叫做lock/unlock.
@@ -313,20 +321,60 @@ Concurrent List也差不多,可以通过全局锁的形式,提供并发支持.
 
 可以通过添加全局锁来实现,也可以通过每个bucket各一把来实现.后者的并发程度更高.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 # 5. chapter 30, Condition Variables
+
+lock可以用来避免race condition,但不可避免的会因为自旋而产生cpu时间浪费.同时,我们也有很多这样的需求:线程等待某个条件满足了,才能够执行下去.比如消费者只有等生产者生产才能消费.所以,需要有这样一种机制:先让线程block,等条件满足了再来唤醒它,即是条件变量.
+
+## 5.1. pthread_cond_wait,pthread_cond_signal,pthread_cond_broadcast
+
+先说明,**pthread_cond_signal唤醒一个waiter,pthread_cond_broadcast唤醒所有waiter**.
+
+这里解释几个事情.
+   
+### 5.1.1. Mesa Semantics,Hoare Semantics
+
+Mesa Semantics:signal(或者叫notify)并不代表running!常见的os都是这种方式.
+
+Hoare Semantics:signal(或者叫notify)后立即进入running!
+
+结合进程三基本状态即可理解.
+
+
+### 5.1.2. 为什么wait需要传递一个mutex作为参数?
+
+因为,wait不是一种原子性的内和调用.也就是说,wait可以被中断.**wait的内部细节是,(a)将当前线程加入挂起等待队列,释放mutex,(b)自旋等待,试图获取signal,(c)成功获取signal,处理内部数据细节,重新获取mutex**.如果没有这个mutex,执行wait的线程可能被执行signal的线程中断,在成功进入等待队列前,先一步完成notify的操作.当wait线程重新进行时,就会陷入无限的等待.所以,必须要加入一个锁,来保证wait中**进入等待队列操作**的的原子性.  
+所以,wait一定要和mutex结合来用.
+
+### 5.1.3. 已经有了pthread_cond_signal机制(在C++中反映为notify()),为什么需要一个状态变量,来反映条件成立?  
+即使wait有mutex来帮助保证原子性,还是不够的.因为,wait()仅仅负责等待队列的进入离开等相关操作,只看是不是有其他线程调用了pthread_cond_signal,不负责具体条件的成立与否.如果wait线程和signal线程产生后,signal先执行,先尝试唤醒等待的线程(但wait线程还没开始执行,没有进入等待队列),后续的wait线程如果不先检测状态变量,就会一头撞进等待队列,再也出不来.  
+所以,cv一定要使用一个状态变量.
+
+### 5.1.4. 为什么使用while而不是if来检测条件?  
+
+* 首先,wait有可能失败.失败后,应该重新检测,而不是就此放过.
+
+* 其次,wait正常返回时(被notify了),wait线程知道条件已经满足了,所以准备下一步工作.但巧的是,其他wait线程也wake up了,先一步进行了下一步工作,导致条件不成立(比如生产消费问题).当切换回第一个wait线程,条件已经不成立,但程序却按成立继续进行,所以会发生错误.
+
+总的来说,**条件变量一定要结合锁和状态标志变量来使用**.
+
+
+
+
+## 5.2. 生产消费问题
+
+说两个问题.
+
+### 5.2.1. 为什么不使用lock
+
+如果使用最初的mutex来控制并发,可能产生死锁(consumer试图从空buffer中获取元素,同时获得mutex,与是producer无法获得mutex,放入元素),即使使用多个mutex,也会产生类似问题(consumer获得了所有锁,又试图从空buffer中获取元素,producer与是又无法或的mutex).
+
+所以要找新思路:使用条件变量来解决.
+
+### 5.2.2. 为什么使用两个condvar
+
+一个的话并发性不高.
+
+因为buffer肯定不能只有一个位置.如果有多个位置,因为生产消费的速度不同,所以要允许各自有**产能过剩**和**消费饥渴**的情况发生.
 
 # 6. chapter 31, Semaphores
 
