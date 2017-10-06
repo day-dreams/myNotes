@@ -34,6 +34,12 @@ Operating Systems: Three Easy Pieces
         - [5.2.1. 为什么不使用lock](#521-为什么不使用lock)
         - [5.2.2. 为什么使用两个condvar](#522-为什么使用两个condvar)
 - [6. chapter 31, Semaphores](#6-chapter-31-semaphores)
+    - [什么是semaphores](#什么是semaphores)
+    - [semaphores as lock](#semaphores-as-lock)
+    - [semaphores as condvar](#semaphores-as-condvar)
+    - [生产消费问题](#生产消费问题)
+    - [读写锁](#读写锁)
+    - [哲学家就餐](#哲学家就餐)
 - [7. Common Concurrency Problems](#7-common-concurrency-problems)
 - [8. Event-based Concurrency](#8-event-based-concurrency)
 
@@ -377,6 +383,42 @@ Hoare Semantics:signal(或者叫notify)后立即进入running!
 因为buffer肯定不能只有一个位置.如果有多个位置,因为生产消费的速度不同,所以要允许各自有**产能过剩**和**消费饥渴**的情况发生.
 
 # 6. chapter 31, Semaphores
+
+## 什么是semaphores
+
+信号量是一种并发控制工具,它在内部维护一个数,主要提供init,post和wait三个操作.
+* init()  
+    init初始化信号量内部的数.
+* wait()  
+    wait将信号量内部的数减一.在减操作执行前,如果当数大于0,调用wait会直接返回,继续后面的操作;否则,调用wait会使程序阻塞,线程转入block状态.在这两种情况下,wait返回之前,会将内部数减一.
+* post()  
+    post将信号量内部的数加一.加操作完毕后,如果内部数大于0,post会唤醒一个因为wait()而阻塞的线程,将它变为ready状态.
+
+其实,semaphores最大的好处是,**可以进程间共享**.
+
+## semaphores as lock
+
+这种锁又叫binary semephores.例子在[这里](./examples/semaphores/as-lock.cpp).
+
+## semaphores as condvar
+
+例子在[这里](./examples/semaphores/as-semaphores.cpp).
+
+## 生产消费问题
+
+例子在[这里](./examples/semaphores/produce-consume.cpp).
+
+需要说明的是,如果想控制buffer的最大容量,需要改变wait和post的方式.
+
+## 读写锁
+
+例子在[这里](./examples/semaphores/read-write-lock.cpp).
+
+这个实现有个缺点:writelock比readlock难获取.因为一旦有reader获得了锁,后续的reader可以直接获得,writer则必须等待所有的reader完成read.我想到的解决办法是,添加一个队列来维护陷入等待的writer和reader信息.如果一个reader要获得锁,必须没有等待中的writer排在它前面,才可以获得;如果一个writer要获得锁,必须没有等待中的reader排在它前面.这样一来,可以严格按照请求锁的时间顺序来分配锁.为了维护时间顺序,需要在内部维护序列号.这样的话,就有点像条件变量的实现方式了,并且这个实现太复杂了,得不偿失.
+
+## 哲学家就餐
+
+这个问题实际上对于三种同步工具(lock,condvar,semaphores)是通用的.由于哲学家拿筷子的顺序相同(先左后右),所以会造成死锁.我们只要改变其中一个人的拿筷子顺序,就可以避免死锁.
 
 # 7. Common Concurrency Problems
 
