@@ -17,56 +17,39 @@ public:
   T get() {
     auto rv = buffer.front();
     buffer.pop();
+    // cout << "returning:: " << rv << endl;
     return rv;
   }
 };
 
 buffer_t<int> buffer;
 condition_variable fullcondvar, emptycondvar;
-mutex fullmutex, emptymutex, buffermutex;
+mutex m;
 
 random_device engine;
 int generateRandomInt() { return engine(); }
 
 void produce() {
   while (true) {
-    this_thread::sleep_for(chrono::seconds(3));
-    {
-      unique_lock<mutex> lock(emptymutex);
-      emptycondvar.wait(lock, []() {
-        buffermutex.lock();
-        auto size = buffer.getSize();
-        buffermutex.unlock();
-        return size == 0;
-      });
-    }
-    buffermutex.lock();
+    this_thread::sleep_for(chrono::seconds(1));
+    unique_lock<mutex> lock(m);
+    emptycondvar.wait(lock, []() { return buffer.getSize(); });
+
     cout << "produceThread: adding product.." << endl;
     buffer.put(generateRandomInt());
-    buffermutex.unlock();
-
     fullcondvar.notify_one(); //通知一个消费者开始消费
   }
 }
 
 void consume() {
   while (true) {
-    {
-      unique_lock<mutex> lock(fullmutex);
-      fullcondvar.wait(lock, []() {
-        buffermutex.lock();
-        auto size = buffer.getSize();
-        buffermutex.unlock();
-        return size > 0;
-      });
-    }
+    unique_lock<mutex> lock(m);
+    fullcondvar.wait(lock, []() { return buffer.getSize() > 0; });
 
-    buffermutex.lock();
     auto x = buffer.get();
-    buffermutex.unlock();
     cout << "consumeThread: got an element " << x << endl;
 
-    emptycondvar.notify_all(); //通知所有生产者开始生产
+    emptycondvar.notify_one(); //通知一个生产者开始生产
   }
 }
 
