@@ -195,9 +195,11 @@ DirectMemoryAccess就是针对这种情况作出的优化措施,也不多说.
 
 硬盘一次IO的时间=SeekTime+RotationalDelay+TransferTime
 
-一般来说,**SeekTime+RotationalDelay远大与TransferTime,可能相差2,3个数量级**.
+一般来说,**如果只涉及到一个扇区的读写,SeekTime+RotationalDelay远大与TransferTime,可能相差2,3个数量级**.
 
 对于访问的扇区分布情况,分布连续和分布随机两种情况下,IO时间的差距非常大.一般来说,**分布随机的IO时间是分布连续的IO时间几百倍**,因为每次随机访问都需要进行seek和rotation,并且这两个操作的时间远大与一次数据读写的时间(transfer time).所以,在使用磁盘IO时,尽量加大每次IO操作的数据大小,让他们尽可能分布在相邻的扇区,从而达到近似连续访问的效果.
+
+数据库系统对于磁盘的IO常常是随机分布的,所以要用到B树来对数据所在的扇区进行索引,避免对磁盘的随机读写造成的效率低下.
 
 ## Disk Scheduling
 
