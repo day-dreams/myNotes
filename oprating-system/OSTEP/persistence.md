@@ -17,6 +17,14 @@ Operating Systems: Three Easy Pieces
     - [1.6. Methods of Device Interactio:设备的寻址方式](#16-methods-of-device-interactio设备的寻址方式)
     - [1.7. Fitting Into OS: Device Driver:外包一样的驱动](#17-fitting-into-os-device-driver外包一样的驱动)
 - [2. chapter 37, Hard Disk Devices](#2-chapter-37-hard-disk-devices)
+    - [2.1. Basic Geometry:硬盘的物理结构](#21-basic-geometry硬盘的物理结构)
+    - [2.2. The Interface:硬盘的接口及特性](#22-the-interface硬盘的接口及特性)
+    - [2.3. A Simple Disk Drive:一个简单的硬盘工作示例](#23-a-simple-disk-drive一个简单的硬盘工作示例)
+        - [Single-track Latenc:The Rotational Delay](#single-track-latencthe-rotational-delay)
+        - [Multiple Tracks:Seek Time](#multiple-tracksseek-time)
+        - [Other Details:Track Skew,Track Buffer](#other-detailstrack-skewtrack-buffer)
+    - [I/O Time:Doing The Math](#io-timedoing-the-math)
+    - [Disk Scheduling](#disk-scheduling)
 - [3. chapter 38, Redundant Arrays of Inexpensive Disks(RAIDS)](#3-chapter-38-redundant-arrays-of-inexpensive-disksraids)
 - [4. chapter 39, Interlude: File and Directories](#4-chapter-39-interlude-file-and-directories)
 - [5. chapter 40, File System Implementation](#5-chapter-40-file-system-implementation)
@@ -98,10 +106,102 @@ DirectMemoryAccess就是针对这种情况作出的优化措施,也不多说.
 
 # 2. chapter 37, Hard Disk Devices
 
+这一章介绍一种非常重要的IO设备:硬盘.
 
+## 2.1. Basic Geometry:硬盘的物理结构
+
+硬盘的结构比较复杂,先放上一张图,再逐一解释.
+
+![hard disk](./hard-disk-structure.jpg)
+
+* 磁盘(platter)  
+    硬盘最主要的部分是磁盘,而且有多个磁盘.数据读写主要发生在磁盘上.
+
+* 磁盘面(surface)  
+    磁盘有两面,每一面都可以独立地进行数据读写.每个面上都有非常多的扇区.
+
+* 扇区(sector)  
+    扇区可以算是最底层的存储介质了.扇区一般是512Bytes大小的存储块,数据的读写直接发生在扇区上.在win下,如果扇区没有写满数据,就会产生"磁盘碎片",其实就是指扇区内部空闲下来的数据快.  
+
+* 磁道(track)  
+    扇区的形状是类似扇形的,多个扇区排列在一起,就组成了一个完整的圆环,这个圆环就是磁道.多个圆环组合在一起,就成了一个磁盘面.可以想到,因为扇区的大小固定,所以每个扇区的面积是一致的,与是,不同磁道上的扇区数量不同.越往外围,磁道的扇区越多.一个surface会有上千个track紧密排列在一起.
+
+* 转轴(spindle)  
+   所有的磁盘会围绕一个转轴为中心(当然,不是所有磁盘都同时旋转),以固定的速度进行旋转.这个速度叫做rotations per minute(RPM),这个参数是衡量硬盘性能的重要指标之一.
+    
+* 磁头(disk head)
+    磁头完成对扇区的读写工作,并且,一个磁盘的每个磁盘面都有一个磁头.
+
+* 磁臂(disk arm)  
+    磁臂连接着磁头,会在磁盘面上移动,将磁头移到需要访问的磁道上.
+
+## 2.2. The Interface:硬盘的接口及特性
+
+简单来说,硬盘对自己的内部结构进行了抽象,只保留扇区的概念.它把自己的存储空间按照特定的扇区大小进行编号(地址空间),读写的时候,只需要制定扇区编号,底层的磁头定位扇区全部被自动完成.
+
+可以通过Linux源码来印证这一点,下面就是Linux4.9对于扇区号的定义,如果一个扇区是512Bytes,32位系统下差不多可以承载最多2TB的硬盘大小.
+
+![](./sectors-index.png)
+
+这里也有一些特性:
+
+* 磁盘驱动保证,对一个扇区的写操作是原子性的.当一批数据被写到一系列扇区,如果突然断电,只有一部分扇区的写操作会出现问题.
+
+* 磁盘驱动没有作出这样的保证,但一般情况下是成立的:
+    * 对地址空间上相邻的两个扇区进行操作,比相距较远的两个扇区快.
+    * 对连续的扇区进行读写,比离散的扇区读写要快.
+
+## 2.3. A Simple Disk Drive:一个简单的硬盘工作示例
+
+我们通过逐步还原硬盘的真实情况来介绍.
+
+### Single-track Latenc:The Rotational Delay
+
+以这个简单的硬盘模型为例.这个硬盘只有一个磁盘,一个磁盘面,一个磁道,磁道上有12个扇区,依次编号为0,1,2,..,11.
+
+![](./disk-model-1.png)
+
+现在disk head在sector6,如果想要访问sector11,需要等待磁盘旋转半周.如果旋转一周的时间是R,则还需要R/2的时间去等待磁头到位.如果想要访问sector5,则几乎要等待R时间.
+
+这个旋转一周的时间R很重要,严重影响硬盘性能,这个时间也叫做旋转延迟(RotationalDelay).
+
+### Multiple Tracks:Seek Time
+
+![](./disk-model-2.png)
+
+如果一个盘面有多个磁道,磁头的就位还需要更多的时间.在上面的图中,一共有3个磁道,扇区从0到35分布在不同的磁道上.
+
+现在磁头在sector30(左图),想要访问sector11.首先,磁臂需要移动到最外层,再等待sector旋转到磁头下,完成读写操作.
+
+磁臂的移动有这几个步骤:  
+* 向外圈加速
+* 滑行
+* 减速
+* 稳定(settling)
+
+以上过程叫做**seek**,花费的时间叫做**Seek Time**.其中最重要的是settling time,磁头需要在这个时间内判定是否到达了需要访问的磁道.
+
+### Other Details:Track Skew,Track Buffer
+
+![](./disk-model-3.png)
+
+* track skew  
+    这个是指扇区编号的偏移.这个偏移可以让磁头到达下一个磁道时,刚好能遇到这个磁道最开始的扇区,从而避免需要访问的扇区旋转过头了.
+
+* Track Buffer  
+    这个就是一种缓存.类似于内存的高速缓存.
+    
+## I/O Time:Doing The Math
+
+硬盘一次IO的时间=SeekTime+RotationalDelay+TransferTime
+
+一般来说,**SeekTime+RotationalDelay远大与TransferTime,可能相差2,3个数量级**.
+
+对于访问的扇区分布情况,分布连续和分布随机两种情况下,IO时间的差距非常大.一般来说,**分布随机的IO时间是分布连续的IO时间几百倍**,因为每次随机访问都需要进行seek和rotation,并且这两个操作的时间远大与一次数据读写的时间(transfer time).所以,在使用磁盘IO时,尽量加大每次IO操作的数据大小,让他们尽可能分布在相邻的扇区,从而达到近似连续访问的效果.
+
+## Disk Scheduling
 
 # 3. chapter 38, Redundant Arrays of Inexpensive Disks(RAIDS)
-
 
 
 # 4. chapter 39, Interlude: File and Directories
