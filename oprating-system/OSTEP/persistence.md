@@ -23,8 +23,12 @@ Operating Systems: Three Easy Pieces
         - [Single-track Latenc:The Rotational Delay](#single-track-latencthe-rotational-delay)
         - [Multiple Tracks:Seek Time](#multiple-tracksseek-time)
         - [Other Details:Track Skew,Track Buffer](#other-detailstrack-skewtrack-buffer)
-    - [I/O Time:Doing The Math](#io-timedoing-the-math)
-    - [Disk Scheduling](#disk-scheduling)
+    - [I/O Time:性能时间计算](#io-time性能时间计算)
+    - [Disk Scheduling:磁盘调度](#disk-scheduling磁盘调度)
+        - [SSTF,Shortes Seek Time First](#sstfshortes-seek-time-first)
+        - [Elevator](#elevator)
+        - [SPTF,Shortest Positioning Time First](#sptfshortest-positioning-time-first)
+        - [其他细节:merging,wait](#其他细节mergingwait)
 - [3. chapter 38, Redundant Arrays of Inexpensive Disks(RAIDS)](#3-chapter-38-redundant-arrays-of-inexpensive-disksraids)
 - [4. chapter 39, Interlude: File and Directories](#4-chapter-39-interlude-file-and-directories)
 - [5. chapter 40, File System Implementation](#5-chapter-40-file-system-implementation)
@@ -191,7 +195,7 @@ DirectMemoryAccess就是针对这种情况作出的优化措施,也不多说.
 * Track Buffer  
     这个就是一种缓存.类似于内存的高速缓存.
     
-## I/O Time:Doing The Math
+## I/O Time:性能时间计算
 
 硬盘一次IO的时间=SeekTime+RotationalDelay+TransferTime
 
@@ -201,7 +205,35 @@ DirectMemoryAccess就是针对这种情况作出的优化措施,也不多说.
 
 数据库系统对于磁盘的IO常常是随机分布的,所以要用到B树来对数据所在的扇区进行索引,避免对磁盘的随机读写造成的效率低下.
 
-## Disk Scheduling
+## Disk Scheduling:磁盘调度
+
+硬盘与CPU都存在共享的问题,需要对磁盘IO请求进行排队服务,所以就衍生出了调度问题:选择哪个IO请求去服务.
+
+幸运的是,对于磁盘IO的操作一般都可以预估时间,因为只要给了数据大小,就可以根据计算出大致需要的时间.
+
+### SSTF,Shortes Seek Time First
+
+根据seektime的长度来调度,但是会导致starvation.
+
+### Elevator
+
+把磁头从内部移动到外部称为sweep.在磁头移动的时候,保证方向要么离心要么向心,而且变向之发生在一次sweep完成之后.这就保证了不会出现starvation,同时根据track的距离来调度io请求.
+
+不过没有考虑到seektime.
+
+### SPTF,Shortest Positioning Time First
+
+这个调度就是完全根据磁头位置,track分布来选择io请求.由于磁盘的内部结构对OS透明,所以这种调度发生在磁盘内部.
+
+现代OS一般会把一系列IO请求同时发给硬盘,硬盘自己在内部进行SPTF调度,按最优的顺序完成IO请求.
+
+### 其他细节:merging,wait
+
+还有些其他的调度细节.
+
+比如,磁盘调度器会把几个对同一个扇区的读请求合并(**merging**).
+
+现代OS在接受到IO请求的时候,可能不会直接向磁盘发命令,而是等待更多的IO请求,从而自己选择一批更优的请求给磁盘.
 
 # 3. chapter 38, Redundant Arrays of Inexpensive Disks(RAIDS)
 
