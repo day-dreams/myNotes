@@ -27,7 +27,7 @@
 * [如何设计系列](./how-to-design)
 * [网络](./netowrk)
     * [unix中的5种socket IO模型](./netowrk/socket-io-model-in-unix.md)
-    * [网络性能:时延,丢包与吞吐量](./netowrk/delay-packetloss-throughput.md)
+    * [计算机网络:自顶向下方法,笔记](./network/cecs572)
     * [TCP/IP详解卷一,笔记](./netowrk/TCP-IP-Illustrated-V1)
         * [第0部分 IP地址结构](./netowrk/TCP-IP-Illustrated-V1/0-structure-of-IP-address.md)
         * [第2分 ARP协议](./netowrk/TCP-IP-Illustrated-V1/2-address-resolve-protocol.md)

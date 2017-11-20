@@ -40,12 +40,12 @@
 * propagation delay  
     传播延迟
     
-![nodal delay](../pictures/nodal-delay.png)
+![nodal delay](../../pictures/nodal-delay.png)
 
 在一个传输节点上,数据分组的总延迟(**nodal delay**)就是上述几个延迟的总和,可以简单的认为总延迟是在毫秒(ms)级别的.
 
 
-![delay model](../pictures/delay-model.png)
+![delay model](../../pictures/delay-model.png)
 
 当路由器接受到上游发来的数据包,路由器会检查数据包的头部信息,选择合适的路由线路,也就是这个路由器自己的出口端口(outbound link).如果这个**出口端口正忙**(正在被使用,即有其他的数据包正在发送,或者是有其他的数据包正出在这个端口的等待队列中),**新到达的数据包就会进入等待队列**,等待被传输.当然,如果队列太大超过限制,数据包就会被丢失.
 
@@ -75,7 +75,7 @@
 
 假设一个容量无限大的路由队列中每秒到达的数据包个数为a,数据包大小都为L,我们称La/R为**traffic intensity**,这个变量反映了路由的拥堵情况.队列s数据包的平均延迟与La/R相关性大概如下图
 
-![](../pictures/queuedelay-alr.png)
+![](../../pictures/queuedelay-alr.png)
 
 可以看到,如果La/R接近1,平均延迟将会非常大.如果对应到DNS请求包(数据包的大小非常接近),这里的La/R就类似与每秒发包数.
 
