@@ -31,6 +31,9 @@ Operating Systems: Three Easy Pieces
         - [其他细节:merging,wait](#其他细节mergingwait)
 - [3. chapter 38, Redundant Arrays of Inexpensive Disks(RAIDS)](#3-chapter-38-redundant-arrays-of-inexpensive-disksraids)
 - [4. chapter 39, Interlude: File and Directories](#4-chapter-39-interlude-file-and-directories)
+    - [Files and Directories](#files-and-directories)
+    - [Creating Files](#creating-files)
+    - [Reading and Writing Files](#reading-and-writing-files)
 - [5. chapter 40, File System Implementation](#5-chapter-40-file-system-implementation)
 - [6. chapter 41, Locality and The Fast Fils System](#6-chapter-41-locality-and-the-fast-fils-system)
 - [7. chapter 42, Crash Consistency:FSCK and Journaling](#7-chapter-42-crash-consistencyfsck-and-journaling)
@@ -239,6 +242,25 @@ DirectMemoryAccess就是针对这种情况作出的优化措施,也不多说.
 
 
 # 4. chapter 39, Interlude: File and Directories
+
+## Files and Directories
+
+无论是file还是directory,在操作系统中都有两个层次的名字.  
+
+* low-level  
+    inode number,对操作系统用户不可见
+* high-level  
+    readable name,作为用户可见的文件名存在.
+
+在文件系统中,每个文件都是一个节点,这个节点记录了inode number和readable name;目录也是一个节点,除了inode number和readable name外,还具有特殊的内容,即这个目录下的文件列表,文件列表中的元素是(inode number,readable name),也就是普通文件.
+
+## Creating Files
+
+nothing important.
+
+## Reading and Writing Files
+
+<!-- TODO: -->
 
 
 

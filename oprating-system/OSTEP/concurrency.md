@@ -40,7 +40,7 @@ Operating Systems: Three Easy Pieces
     - [生产消费问题](#生产消费问题)
     - [读写锁](#读写锁)
     - [哲学家就餐](#哲学家就餐)
-- [7. Common Concurrency Problems](#7-common-concurrency-problems)
+- [7.  chapter 32, Common Concurrency Problems](#7--chapter-32-common-concurrency-problems)
 - [8. Event-based Concurrency](#8-event-based-concurrency)
 
 <!-- /TOC -->
@@ -420,6 +420,6 @@ Hoare Semantics:signal(或者叫notify)后立即进入running!
 
 这个问题实际上对于三种同步工具(lock,condvar,semaphores)是通用的.由于哲学家拿筷子的顺序相同(先左后右),所以会造成死锁.我们只要改变其中一个人的拿筷子顺序,就可以避免死锁.
 
-# 7. Common Concurrency Problems
+# 7.  chapter 32, Common Concurrency Problems
 
 # 8. Event-based Concurrency
