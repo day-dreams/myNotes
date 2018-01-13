@@ -13,6 +13,8 @@ chapter[12,17]
 - [4. chapter 15,TCP Data Flow and Window Management](#4-chapter-15tcp-data-flow-and-window-management)
 - [5. chapter 16,TCP Congestion Control](#5-chapter-16tcp-congestion-control)
 - [6. chapter 17,TCP Keepalive](#6-chapter-17tcp-keepalive)
+- [一些有趣的问题](#一些有趣的问题)
+    - [慢启动对于服务器响应时间的影响如何？](#慢启动对于服务器响应时间的影响如何)
 
 <!-- /TOC -->
 # 1. chapter 12,TCP:The Transmission Control Protocol
@@ -38,3 +40,8 @@ TCP与UDP、IP等协议的最大不同在于，TCP严格保证服务的可靠性
 # 5. chapter 16,TCP Congestion Control
 
 # 6. chapter 17,TCP Keepalive
+
+
+# 一些有趣的问题
+
+## 慢启动对于服务器响应时间的影响如何？
