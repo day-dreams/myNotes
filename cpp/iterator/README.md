@@ -31,10 +31,12 @@
             - [内部实现](#内部实现-3)
             - [迭代器实现](#迭代器实现-4)
             - [迭代器失效问题](#迭代器失效问题-4)
-        - [set](#set)
+        - [multi map](#multi-map)
             - [内部实现](#内部实现-4)
-            - [迭代器实现](#迭代器实现-5)
             - [迭代器失效问题](#迭代器失效问题-5)
+        - [set](#set)
+            - [内部实现](#内部实现-5)
+            - [迭代器失效问题](#迭代器失效问题-6)
     - [容器适配器](#容器适配器)
         - [stack](#stack)
         - [queue](#queue)
@@ -64,7 +66,7 @@ c++17 之前一共有5中迭代器.
 |input iterator|||
 |output iterator|||
 |forward iterator|std::forward_list|只能前进不能后退,但不能随机访问|
-|bidirectional iterator|std::list,std::map|可以前进也可以后退,但不能随机访问|
+|bidirectional iterator|std::list,std::map,std::set,std::multimap,std::multiset|可以前进也可以后退,但不能随机访问|
 |random-access iterator|std::array,std::vector,std::deque|可以双向随机访问|
 
 ## 序列容器
@@ -165,7 +167,7 @@ forward_list的设计更偏向与性能,所以减少了指针开销,并且不提
 
 #### 内部实现
 
-一般采用红黑树实现.
+一般采用红黑树,插入时采用红黑树的insert_unequal(),不允许键重复的情况.
 
 #### 迭代器实现
 
@@ -175,17 +177,39 @@ forward_list的设计更偏向与性能,所以减少了指针开销,并且不提
 
 只有删除操作才会使迭代器失效.
 
+### multi map
+
+#### 内部实现
+
+一般采用红黑树,插入时采用红黑树的insert_equal(),允许键重复的情况.
+
+
+#### 迭代器失效问题
+只有删除操作才会使迭代器失效.
+
 ### set
 
 #### 内部实现
-#### 迭代器实现
+
+一般采用红黑树,并且插入时采用红黑树的insert_unequal(),不允许键重复的情况.
+
 #### 迭代器失效问题
+
+只有删除操作才会使迭代器失效.
 
 
 ## 容器适配器
 
 ### stack
 
+stack是封装了底层容器来实现的,一般采用deque.只保留部分接口,并且不提供很和迭代其相关的函数.所以不存在迭代器的失效问题.
+
 ### queue
 
+queue也是封装了底层容器,不提供迭代器操作.
+
 ### priority_queue
+
+priority_queue一般依赖一个最大堆或最小堆,一般使用vector来实现.它也不提供任何迭代器操作.
+
+需要注意的是,底层容器必须提供random iterator.

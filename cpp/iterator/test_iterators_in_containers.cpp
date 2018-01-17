@@ -3,6 +3,9 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <queue>
+#include <set>
+#include <stack>
 #include <vector>
 using namespace std;
 
@@ -63,9 +66,32 @@ void test_list_iterator() {
   print<list<int>>(col);
 }
 
+void test_map_iterator() {
+  map<int, bool> col{{1, true}, {2, true}, {3, true}, {4, false}};
+  auto ite = col.begin();
+  std::cout << ite->first << std::endl;
+}
+
+void test_set_iterator() {
+  set<int> col = {0, 1, 2, 3, 4};
+  auto ite = col.begin();
+  std::cout << *ite << std::endl;
+}
+
+void test_priorityqueue() {
+  // error! set没有random access iterator
+  // priority_queue<int, set<int>> col;
+
+  priority_queue<int, vector<int>> col;
+  col.push(1);
+  col.push(1);
+}
 int main(int argc, char **argv) {
-  test_vector_iterator();
+  // test_vector_iterator();
   // test_deque_iterator();
-  test_list_iterator();
+  // test_list_iterator();
+  // test_map_iterator();
+  // test_set_iterator();
+  test_priorityqueue();
   return 0;
 }
