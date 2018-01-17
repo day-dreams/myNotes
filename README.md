@@ -19,7 +19,9 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 ## C++
 
-- [ ] STL中迭代器的实现及失效问题
+- [x] STL中迭代器的实现及失效问题
+
+- [x] **emplace_pack** VS **push_back**
 
 - [ ] 内存的分配和释放，new,delete,malloc,realloc,free,new[],delete[]
 
