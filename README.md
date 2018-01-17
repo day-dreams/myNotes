@@ -23,6 +23,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] **emplace_pack** VS **push_back**
 
+- [ ] RVO 和 move语义的关系，参考[博客](https://www.ibm.com/developerworks/community/blogs/5894415f-be62-4bc0-81c5-3956e82276f3/entry/RVO_V_S_std_move?lang=en)
+
 - [ ] 内存的分配和释放，new,delete,malloc,realloc,free,new[],delete[]
 
 - [ ] 异常的实现方式
