@@ -25,7 +25,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [RVO VS std::move](cpp/RVO-vs-move/README.md)
 
-- [ ] 内存的分配和释放，new,delete,malloc,realloc,free,new[],delete[]
+- [x] [内存的分配和释放(malloc/free,new/delete operator,new/delete expression)](cpp/memory-control/README.md)
 
 - [ ] 异常的实现方式
 
@@ -40,6 +40,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 - [ ] static关键字对于编译流程的影响
 
 - [ ] 智能指针和线程安全
+
+- [ ] 为什么说allocator是无用的设计(参考陈硕的博客)
 
 ## Python
 
@@ -63,6 +65,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 - [ ] epoll和select的使用与区别
 
 ## 内核
+
+- [ ] malloc,free的实现方式
 
 - [ ] epoll和select的实现方式
 
