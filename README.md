@@ -101,9 +101,9 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 ### 进程调度子系统
 
-- [ ] 线程的实现方式(从stuct_task的角度去分析group,thread,process)
+- [ ] 线程的实现方式(从stuct_task的角度去分析group,thread,process)程通信子系统
 
-###　进程通信子系统
+### 进程通信子系统
 
 ### 其他
 
