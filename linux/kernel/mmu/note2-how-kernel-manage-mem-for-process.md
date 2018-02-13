@@ -1,4 +1,4 @@
-Linux内核的内存管理机制(二)之 内核如何管理进程的内存
+Linux内核的内存管理机制(二)之 地址空间和内存区域
 ===
 
 本文属于内核学习系列中一段,主要描述Linux管理进程内存的机制.
@@ -235,6 +235,24 @@ static inline struct vm_area_struct * find_vma_intersection(struct mm_struct * m
 
 当新进程建立,内核要为止创建地址空间(struct mm_struct),并创建内存区域(struct vm_area_struct)来存放一些数据(比如代码段,数据段,bss段等),最终把内存区域填充到地址空间中.
 
+do_mmap的实现细节很复杂,不考虑映射磁盘文件时,主要完成这些工作:
+1. 检查参数  
+2. 调用get_unmapped_area(),查找一个可以使用的内存区域  
+3. 通过传入的参数来计算内存区域的状态.此时,**内存区域没有创建,而且没有为之分配内存页**  
+4. 调用find_vma_prepare(),查找新的的内存区域在红黑树中的位置,以及前一个内存区域的位置  
+5. 检查新的内存区域是否会引起内存超出进程限制.如果超出,撤销创建并返回错误码  .
+6. 检查剩余的空闲内存页是否够用.新的内存区域是否包含私有可写的区域,并且没有足够的空闲页框为这些区域提供映射.即剩余内存不足以支撑私有可写区域.如果是,返回出错码.  
+7. 如果新的内存区域是私有的,并且不映射到磁盘文件,检查这个新的内存区域是否可以合并到前一个内存区域.如果可以,直接调用vma_merge()合并之,并跳转到11.
+8. 使用slab机制,为vma_area_struct分配一块内存,使用计算好的标志位来初始化之.此时,**内存区域创建成功**.
+9. 如果新的内存区域是个匿名共享区,即用于进程通信,那么调用shmem_zero_setup()来初始化之.
+10. 调用vma_link(),把新的vma_area_struct结构插入到链表和红黑树中.
+11. 增加task_struct中的内存大小字段.
+12. 如果新的内存区域设置了VM_LOCKED,即被锁在内存而不能被换出,那么直接为它分配内存页.
+13. 创建完毕.
+
+**注意,如果内存区域没有设置VM_LOCKED,内核并没有直接为之分配内存页.内存页的分配将推迟到进程访问这部分内存而引起的缺页中断处理中**.
+
+缺页中断的处理留到其他部分再学习.
 
 ```c
 /* 
@@ -282,8 +300,8 @@ int munmap(void *addr, size_t length);
 
 ## reference
 
-[Process Address Space](https://www.kernel.org/doc/gorman/html/understand/understand007.html)
 
+* [Process Address Space](https://www.kernel.org/doc/gorman/html/understand/understand007.html)　　
 * linux-2.6.11.1
 
 * Linux内核设计与实现,第三版  
