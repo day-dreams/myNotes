@@ -97,9 +97,9 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 ### 内存管理子系统
 
-- [x] [内核申请内存的机制和接口](linuc/kernel/mmu/note1-how-kernel-get-memory-for-itself.md)
-- [x] [址空间和内存区域](linuc/kernel/mmu/note-how--kernel-get-memory-for-itself.md)
-- [x] [址翻译的细节](linuc/kernel/mmu/note-how-kernel-get-memory-for-itself.md)
+- [x] [内核申请内存的机制和接口](linux/kernel/mmu/note1-how-kernel-get-memory-for-itself.md)
+- [x] [地址址空间和内存区域](linux/kernel/mmu/note2-how-kernel-manage-mem-for-process.md)
+- [x] [地址址翻译的细节](linux/kernel/mmu/note3-how-kernel-manage-memory-page.md)
 
 - [ ] 缺页中断的细节
 - [ ] malloc,free的实现方式
