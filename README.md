@@ -33,6 +33,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [内存的分配和释放(malloc/free,new/delete operator,new/delete expression)](cpp/memory-control/README.md)
 
+- [ ] 如何实现一个内存池?
+
 - [ ] 什么是异常安全？解决什么问题？如何解决？
 
 - [ ] 如何处理构造函数和析构函数里可能引发的异常？
@@ -95,8 +97,11 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 ### 内存管理子系统
 
-- [ ] 内核的内存管理机制
+- [x] [内核申请内存的机制和接口](linuc/kernel/mmu/note1-how-kernel-get-memory-for-itself.md)
+- [x] [址空间和内存区域](linuc/kernel/mmu/note-how--kernel-get-memory-for-itself.md)
+- [x] [址翻译的细节](linuc/kernel/mmu/note-how-kernel-get-memory-for-itself.md)
 
+- [ ] 缺页中断的细节
 - [ ] malloc,free的实现方式
 
 ### 进程调度子系统
@@ -108,6 +113,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 ### 其他
 
 - [ ] 如何编译内核
+
+- [ ] 如何理解struct percpu_struct结构
 
 # 数据库
 
