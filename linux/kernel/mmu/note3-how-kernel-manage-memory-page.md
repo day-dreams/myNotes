@@ -39,12 +39,20 @@ linux采用四级分页机制,虚拟地址被划分四部分:
 ![vaddress layout](vaddress-split.png)
 
 
-至于每个部分有几位,这要根据具体平台来决定.x86体系下,内核代码这样反映:
+至于每个部分有几位,具体位的用途,要根据具体平台来决定.x86_64体系下,内核代码这样反映:
 ```c
-typedef unsigned long pte_t;
-typedef unsigned long pmd_t;
-typedef unsigned long pgd_t;
-typedef unsigned long pgprot_t;
+typedef struct { unsigned long pte; } pte_t;
+typedef struct { unsigned long pmd; } pmd_t;
+typedef struct { unsigned long pud; } pud_t;
+typedef struct { unsigned long pgd; } pgd_t;
+
+typedef struct { unsigned long pgprot; } pgprot_t;/*保护标志*/
+
+#define pte_val(x)	((x).pte)
+#define pmd_val(x)	((x).pmd)
+#define pud_val(x)	((x).pud)
+#define pgd_val(x)	((x).pgd)
+#define pgprot_val(x)	((x).pgprot)
 ```
 
 ## 用户进程的虚拟地址转化成物理地址
@@ -55,7 +63,7 @@ typedef unsigned long pgprot_t;
 
 ## 缺页异常处理程序如何被触发
 
-一般的CPU架构都会提供一个MMU,即内存管理单元,负责内存翻译,缓存控制等工作.Linux内核只需要提供页表的地址,MMU自己会完成翻译工作.
+一般的CPU架构都会提供一个MMU,即内存管理单元,负责内存翻译,缓存控制等工作.Linux内核只需要设置好页表,MMU自己会完成翻译工作.注意,页表在内存里,而某些平台下的页表缓存(page look- buffer)在CPU内的MMU中,访问速度远快与访存.同时,页表的访问应该也不是一般的访存流程,并且是平台相关的,故不做研究.
 
 当CPU执行一条指令,需要根据地址去读写内存.假设是用户进程在执行,由于指令里是虚拟地址,MMU会根据页表去查找page table entry,再翻译成实际的物理地址.
 
@@ -65,7 +73,7 @@ typedef unsigned long pgprot_t;
 
 ## 内核的虚拟地址转化到物理地址
 
-内核线程不需要自己维护一个page table,因为所有的内核代码共享一个地址空间,直接使用全局策略即可.
+用户进程需要维护自己的page table,因为各自的地址空间使用情况不同,必须独立维护;内核进程不需要自己维护一个page table,因为所有的内核代码共享一个地址空间,直接使用全局策略即可.
 
 对于一个32位的虚拟地址空间,应用程序使用低3G的地址,内核使用高1G的地址.这种设计是为了隔离二者的地址空间,从而使内核轻松区分用户进程是不是在尝试访问内核地址.内核编译的时候应该是带有一些选项,使得程序的地址从PAGE_OFFSET开始.
 
@@ -89,7 +97,7 @@ page作为一个重要的结构,需要经常被访问.比如,要计算虚拟地�
 
 /* 通过数组直接索引到目标page结构体
  * mem_map是全局的struct page的数组首地址,pfn是物理页的编号
- */
+ * */
 #define pfn_to_page(pfn)	(mem_map + (pfn))
 
 /*接受内核虚拟地址,转化成对应struct page的地址,返回的也是内核虚拟地址*/
@@ -99,4 +107,4 @@ page作为一个重要的结构,需要经常被访问.比如,要计算虚拟地�
 
 ## struct page转换到物理页的首地址
 
-计算出page想对于mem_map的偏移量,再换算即可.
+计算出page相对于mem_map的偏移量,再换算即可.
