@@ -20,6 +20,8 @@ Linux内核的内存管理机制(一)之 内核申请内存的机制和接口
 		- [分配物理地址不一定连续的内存,ｖmalloc,vfree](#分配物理地址不一定连续的内存ｖmallocvfree)
 - [内核用来管理内存的策略](#内核用来管理内存的策略)
 	- [伙伴系统](#伙伴系统)
+		- [分配块](#分配块)
+		- [释放块](#释放块)
 	- [slab分配器](#slab分配器)
 		- [层次结构](#层次结构)
 		- [使用接口](#使用接口)
@@ -57,7 +59,7 @@ struct page {
 
 ### 区
 
-物理页并不是平等的存在,而是存在某些页仅用于一些特殊用途.比如DMA.所以Linux使用区这个概念,根据用途划分物理页.区只是一种概念,并不涉及具体的数据结构.
+物理页并不是平等的存在,而是存在某些页仅用于一些特殊用途.比如DMA.所以Linux使用区这个概念,根据用途划分物理页.
 
 include/linux/mmzone.h中有这几种区:
 ```c
@@ -66,6 +68,89 @@ include/linux/mmzone.h中有这几种区:
 #define ZONE_HIGHMEM		2	/* 高端内存区,这个区里的页和物理页的对应关系是不固定的,方便内核访问更多的内存 */
 /*还有更多,不再列出*/
 ```	
+
+区并不只是个概念,而是具有自己的数据结构.
+
+```c
+struct zone {
+	/* Fields commonly accessed by the page allocator */
+	unsigned long		free_pages;
+	unsigned long		pages_min, pages_low, pages_high;
+	/*
+	 * We don't know if the memory that we're going to allocate will be freeable
+	 * or/and it will be released eventually, so to avoid totally wasting several
+	 * GB of ram we must reserve some of the lower zone memory (otherwise we risk
+	 * to run OOM on the lower zones despite there's tons of freeable ram
+	 * on the higher zones). This array is recalculated at runtime if the
+	 * sysctl_lowmem_reserve_ratio sysctl changes.
+	 */
+	unsigned long		lowmem_reserve[MAX_NR_ZONES];
+
+	struct per_cpu_pageset	pageset[NR_CPUS];
+
+	/*
+	 * free areas of different sizes
+	 */
+	spinlock_t		lock;
+	struct free_area	free_area[MAX_ORDER];
+
+
+	ZONE_PADDING(_pad1_)
+
+	/* Fields commonly accessed by the page reclaim scanner */
+	spinlock_t		lru_lock;	
+	struct list_head	active_list;
+	struct list_head	inactive_list;
+	unsigned long		nr_scan_active;
+	unsigned long		nr_scan_inactive;
+	unsigned long		nr_active;
+	unsigned long		nr_inactive;
+	unsigned long		pages_scanned;	   /* since last reclaim */
+	int			all_unreclaimable; /* All pages pinned */
+
+	/*
+	 * prev_priority holds the scanning priority for this zone.  It is
+	 * defined as the scanning priority at which we achieved our reclaim
+	 * target at the previous try_to_free_pages() or balance_pgdat()
+	 * invokation.
+	 *
+	 * We use prev_priority as a measure of how much stress page reclaim is
+	 * under - it drives the swappiness decision: whether to unmap mapped
+	 * pages.
+	 *
+	 * temp_priority is used to remember the scanning priority at which
+	 * this zone was successfully refilled to free_pages == pages_high.
+	 *
+	 * Access to both these fields is quite racy even on uniprocessor.  But
+	 * it is expected to average out OK.
+	 */
+	int temp_priority;
+	int prev_priority;
+
+
+	ZONE_PADDING(_pad2_)
+	
+	wait_queue_head_t	* wait_table;
+	unsigned long		wait_table_size;
+	unsigned long		wait_table_bits;
+
+	/*
+	 * Discontig memory support fields.
+	 */
+	struct pglist_data	*zone_pgdat;
+	struct page		*zone_mem_map;/* 这个区的页数组的首地址,是mem_map的一部分 */
+	/* zone_start_pfn == zone_start_paddr >> PAGE_SHIFT */
+	unsigned long		zone_start_pfn;
+
+	unsigned long		spanned_pages;	/* total size, including holes */
+	unsigned long		present_pages;	/* amount of memory (excluding holes) */
+
+	/*
+	 * rarely used fields:
+	 */
+	char			*name;
+} ____cacheline_maxaligned_in_smp;
+```
 
 ## 内核用来管理内存的接口
 
@@ -183,9 +268,38 @@ vmalloc分配虚拟内存空间上连续的内存,不保证在物理地址也连
 
 ### 伙伴系统
 
-不做细节介绍.
+伙伴系统是个很有效的策略,一定程度上解决了外碎片的问题.
 
-伙伴系统适合与分配大块内存.由于其分配以页为单位,不适合分配小块内存.
+伙伴系统中,以order描述一块连续内存的大小,每一块连续内存具有2的order次方个页.伙伴系统维护11个块链表,每个块链表内都是固定大小的空闲块,每个块的order分别为0,1,2,3...10.页的分配只按照最合适的order大小来分配,这样会导致内碎片问题.但是,内碎片往往是由于占用内存太小不足以覆盖页块,这样的内存分配在内核中一般使用其他机制,比如slab.所以伙伴系统专门用于服务大量内存分配.
+
+#### 分配块
+
+alloc_page()函数内部使用了伙伴系统分配空闲块的策略.
+
+对于指定的块order,记为b.  
+* 伙伴系统首先查找order为b的空闲块链表,如果有空闲的块,则直接分配之.  
+* 否则,查找order为b+1的空闲块链表.如果存在空闲块,则把它一分为二,一般用来分配,一般插入到order为b的空闲块链表.
+* 否则,迭代查找order为b+2,b+3,..的空闲块链表.如果在某次迭代查找到了空闲块,则把它拆分后插入更小order的空闲块链表中,最终满足分配需求.
+* 如果最终没有查找到,返回错误信息.
+
+####　释放块
+
+free_page()函数内部使用释放块策略.
+
+释放order为b的块时:
+
+* 伙伴系统计算出这个块的伙伴块.
+* 如果伙伴块不是空闲的,把原块插入空闲快链表.
+* 否则,合并原块和伙伴块,形成新的块.
+* 继续尝试合并新块,直到无法继续合并.
+
+伙伴块的定义如下:
+* 两个块是连续的
+* 两个块大小相同
+* 第一个块的首物理地址是2b乘2的12次方的倍数.
+
+
+<!-- TODO: 伙伴系统和页表机制是不是有冲突? -->
 
 ### slab分配器
 
