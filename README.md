@@ -124,8 +124,9 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 - [x] [地址空间和内存区域](linux/kernel/mmu/note2-how-kernel-manage-mem-for-process.md)
 - [x] [地址翻译的细节](linux/kernel/mmu/note3-how-kernel-manage-memory-page.md)
 
+- [x] [malloc,free的实现方式](linux/kernel/mmu/note4-malloc-and-free.md)
+
 - [ ] 缺页中断的细节
-- [ ] malloc,free的实现方式
 
 ### 进程调度子系统
 
