@@ -10,8 +10,7 @@ linux虚拟文件系统之层次结构
 	- [inode](#inode)
 		- [索引节点的组织](#索引节点的组织)
 	- [file](#file)
-- [从进程角度看](#从进程角度看)
-	- [files_struct](#files_struct)
+- [从用户进程角度看](#从用户进程角度看)
 
 <!-- /TOC -->
 
@@ -201,7 +200,7 @@ struct inode {
 	struct hlist_node	i_hash;
 	struct list_head	i_list;
 	struct list_head	i_sb_list;
-	struct list_head	i_dentry;
+	struct list_head	i_dentry;/* 引用了这个inode的目录项链表 */
 	unsigned long		i_ino;	/* 索引节点号，在块设备内是唯一的 */
 	atomic_t		i_count;
 	umode_t			i_mode;/* 文件类型与访问权限 */
@@ -291,7 +290,7 @@ struct inode_operations {
 
 主要说说lookup函数,这个函数用途是:在一个父目录中查找一个inode对象,.inode对应的文件名在dentry对象中.
 
-####　索引节点的组织
+#### 索引节点的组织
 
 内核也使用五个双向链表来管理索引节点:
 
@@ -347,12 +346,51 @@ struct file {
 };
 ```
 
-## 从进程角度看
+VFS的总体结构图大致如下:
 
-### files_struct
+![vfs-objects](vfs-objects-relation.png)
+
+## 从用户进程角度看
+
+用户进程主要维护两个对象:fs_struct,files_struct.一个用于描述进程和文件系统的关系,即进程的工作目录等信息;另一个用于维护进程打开的文件.
+
+用户进程使用文件描述符来访问文件对象,即是文件对象数组的下标.如果文件被关闭了,原文件描述符指向的文件对象失效.如果后续有其它文件打开,这个文件描述符会被复用.
+
+用户进程通常会给出一个文件名,传给系统调用.系统调用开始从根目录或者当前工作目录开始搜索dentry.如果遇到某个dentry不在内存中,就从磁盘调入到内存,继续搜索,直到找到文件的路径,并分配一个inode节点来管理这个文件.系统调用继续分配出一个file对象,file对象指向dentry,dentry再指向inode节点.这个file对象被添加到用户进程的file_struct数组里,数组下标即是用户进程可用的文件描述符.用户进程使用这个数组下标,并提供相应的读写数据,使用write,read等系统调用来完成文件读写.
 
 
+可以说,用户进程看到的文件系统是fs_struct,files_struct和相关的系统调用;应用程序开发人员由于glibc等库的存在,只看到文件描述符和相关的系统调用.
 
+* fs_struct
+
+```c
+struct fs_struct {
+	atomic_t count;	/* 有多少进程共享这个表 */
+	rwlock_t lock;
+	int umask;
+	struct dentry * root, * pwd, * altroot;
+	struct vfsmount * rootmnt, * pwdmnt, * altrootmnt;
+};
+```
+
+* files_struct
+
+
+```c
+struct files_struct {
+        atomic_t count;		/*引用计数;允许不同进程共享同一个files_struct,或者一个进程的多个线程使用同一个files_struct  */
+        spinlock_t file_lock;     /* Protects all the below members.  Nests inside tsk->alloc_lock */
+        int max_fds;		
+        int max_fdset;
+        int next_fd;
+        struct file ** fd;      /* current fd array */
+        fd_set *close_on_exec;	/* 进程执行exec()需要关闭的文件描述符 */
+        fd_set *open_fds;
+        fd_set close_on_exec_init;
+        fd_set open_fds_init;
+        struct file * fd_array[NR_OPEN_DEFAULT];/* 本进程打开的所有文件对象,默认长度32;如果打开文件超出32,会动态增长 */
+};
+```
 
 
 
