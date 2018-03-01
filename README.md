@@ -34,6 +34,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [内存的分配和释放(malloc/free,new/delete operator,new/delete expression)](cpp/memory-control/README.md)
 
+- [x] [sizeof到底是什么](cpp/sizeof/README.md)
+
 - [ ] 如何实现一个内存池?
 
 - [ ] 什么是异常安全？解决什么问题？如何解决？
@@ -50,7 +52,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [ ] extern关键字对于编译流程的影响
 
-- [ ] static关键字对于编译流程的影响
+- [ ] static关键字对于编译流程,对象构造析构顺序的影响
 
 - [ ] 智能指针和线程安全
 
