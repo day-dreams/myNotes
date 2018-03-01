@@ -321,7 +321,7 @@ struct file {
 	struct dentry		*f_dentry;
 	struct vfsmount         *f_vfsmnt;
 	struct file_operations	*f_op;
-	atomic_t		f_count;
+	atomic_t		f_count;//引用计数
 	unsigned int 		f_flags;
 	mode_t			f_mode;
 	int			f_error;
@@ -330,7 +330,7 @@ struct file {
 	unsigned int		f_uid, f_gid;
 	struct file_ra_state	f_ra;
 
-	size_t			f_maxcount;
+	size_t			f_maxcount;//单次读写支持的最大字节数
 	unsigned long		f_version;
 	void			*f_security;
 
