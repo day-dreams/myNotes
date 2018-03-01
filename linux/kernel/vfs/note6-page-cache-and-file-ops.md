@@ -11,16 +11,26 @@ linux虚拟文件系统之页高速缓存,文件的打开关闭和读写
 	- [相关操作](#相关操作)
 	- [缓冲区高速缓存](#缓冲区高速缓存)
 - [文件操作](#文件操作)
-	- [open()的实现.](#open的实现)
+	- [open()的实现](#open的实现)
 		- [filp_open()](#filp_open)
 			- [open_namei()](#open_namei)
 			- [dentry_open()](#dentry_open)
 		- [fd_install()](#fd_install)
 	- [close()的实现](#close的实现)
 		- [filp_close()](#filp_close)
-	- [读写操作](#读写操作)
-		- [read()调用](#read调用)
-		- [write()调用](#write调用)
+- [文件读写](#文件读写)
+	- [bio层](#bio层)
+	- [read()调用](#read调用)
+		- [fget_light()](#fget_light)
+		- [fpos_read()](#fpos_read)
+		- [vfs_read()](#vfs_read)
+		- [do_sync_read()与__generic_file_aio_read()](#do_sync_read与__generic_file_aio_read)
+	- [write()调用](#write调用)
+		- [fget_light()](#fget_light-1)
+		- [file_pos_read()](#file_pos_read)
+		- [vfs_write()](#vfs_write)
+		- [do_sync_write()和__generic_file_aio_write_nolock()](#do_sync_write和__generic_file_aio_write_nolock)
+- [需要注意的细节](#需要注意的细节)
 
 <!-- /TOC -->
 
@@ -211,7 +221,7 @@ struct buffer_head {
 
 ### 缓冲区高速缓存
 
-缓冲区高速缓存服务于块设备.块设备就是磁盘这样的设备,它们的基本存储概念是扇区,与linux传输交互的是块.块就是一系列扇区,扇区一般是256Byte,块大小一般是页的整数倍.所
+缓冲区高速缓存服务于块设备.块设备就是磁盘这样的设备,它们的基本存储概念是扇区,与linux传输交互的是块.块就是一系列扇区,扇区一般是256Byte,块大小一般是页的整数倍.
 
 在很老的linux版本里,缓冲区高速缓存用来缓存块设备上的块.磁盘上的文件实例化到内存后(即建立inode和file对象),直接使用缓冲区高速缓存来缓存文件,而不是页高速缓存.那个时候的页高速缓存,可能主要用于内存映射什么的.
 
@@ -222,13 +232,13 @@ struct buffer_head {
 
 了解VFS基本概念和页高速缓存之后,就可以正式剖析文件操作了.了解文件操作的底层实现后,就可以知道自己的程序到底干了什么,底层有那些性能瓶颈,对职业发展很有帮助.
 
-### open()的实现.
+### open()的实现
 
 <!-- #### sys_open() -->
 
 open()是glibc提供的编程接口,底层调用了操作系统提供的系统调用sys_open.sys_open才是linux内核层次上的文件打开操作.
 
-sys_open主要完成两件工作:
+sys_open主要完成这些工作:
 * 从进程的文件表中搜索可用的文件描述符
 * 调用filp_open(),根据文件名搜索inode节点后创建file对象,得到文件对象
 * 根据文件对象来初始化进程文件表的对应项
@@ -251,7 +261,7 @@ asmlinkage long sys_open(const char __user * filename, int flags, int mode)
 			error = PTR_ERR(f);
 			if (IS_ERR(f))
 				goto out_error;
-			fd_install(fd, f);								//把文件对象安装到进程的文件描述副表里
+			fd_install(fd, f);	//把文件对象安装到进程的文件描述副表里
 		}
 out:
 		putname(tmp);
@@ -350,7 +360,7 @@ void fastcall fd_install(unsigned int fd, struct file * file)
 }
 ```
 
-###　close()的实现
+### close()的实现
 
 题外话:学到现在,我已经可以自己分析open,close这种不涉及太多算法细节的内核函数了,我感到十分开心.
 
@@ -391,7 +401,7 @@ out_unlock:
 
 filp_close()负责文件对象销毁的细节.
 
-filp_close()首先检查file对象的f_count对象.如果f_count为0,说明已经被关闭.按道理是不会出现这种情况的,但实际上是可能出现的:由于进程某些不正确的文件操作,比如错误的更新了f_count,某些操作函数在错误的参数下导致了一些致命error.我认为这种检查主要是防范内核开发者和一些hacker的.
+filp_close()首先检查file对象的f_count对象.如果f_count为0,说明已经被关闭.按道理是不会出现这种情况的,但实际上:由于进程某些不正确的文件操作,比如错误的更新了f_count,某些操作函数在错误的参数下导致了一些致命error.我认为这种检查主要是防范内核开发者和一些hacker的.
 
 接着,filp_close**试图调用**函数操作表里的flush函数.flush函数应该是平台相关的,不同的文件系统有不同的驱动,实现细节不同.不过flush大体就是把缓冲区的数据回写到磁盘,也就是回写页高速缓存.**试图调用**意味着,文件对象可能是个socket,或者内存映射文件,不需要回写到磁盘.
 
@@ -428,13 +438,411 @@ int filp_close(struct file *filp, fl_owner_t id)
 ```
 
 
-###　读写操作
+## 文件读写
 
 读写才是我最关心的部分!
 
-#### read()调用
+### bio层
 
 
+### read()调用
 
-#### write()调用
 
+read()有可能引起潜在的锁竞争,因为要使用进程文件表,而文件表可能被多个进程共享.
+
+read主要调用这几个函数:
+* `fget_light()`,从文件表获取文件对象.如果文件表给共享了,还需要增加文件对象的引用计数.
+* `file_pos_read()`,获取文件对象中指针偏移量
+* `vfs_read()`,检查相关限制,并决定是使用文件系统专有读操作,还是通用读操作(大部分是通用读).
+* `do_sync_read()`,通用读操作的封装.
+	* `__generic_file_aio_read()`,这个函数是所有文件系统通用的,及通用读操作.这个函数被`do_sync_read()`调用,内部逻辑涉及到:
+		* 检查请求的数据是否已经在address_space中  
+		* 获取文件对象的inode对象
+		* 向磁盘发起读申请,把数据放到addrss_space  
+		* 把数据从内核空间复制到用户空间  
+* `file_pos_write()`,更新读写偏移量
+* `fput_light()`,如果文件表给共享了,就需要减小文件对象的引用计数.
+```c
+asmlinkage ssize_t sys_read(unsigned int fd, char __user * buf, size_t count)
+{
+	struct file *file;
+	ssize_t ret = -EBADF;
+	int fput_needed;
+
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_read(file, buf, count, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
+	}
+
+	return ret;
+}
+```
+
+#### fget_light()
+
+fget_light()是轻量级的文件搜索,搜索发生在进程的文件表里,不涉及vfs.
+
+* 检查进程文件表的引用计数,如果大于1就需要加锁;否则直接操作.
+* 检查文件描述符是否在文件表中,即fd是否小于文件表的最大描述符```fd < files->max_fds```
+* 如果fd在表中,直接返回对应的file对象;否则返回空指针
+
+```c
+struct file fastcall *fget_light(unsigned int fd, int *fput_needed)
+{
+	struct file *file;
+	struct files_struct *files = current->files;
+
+	*fput_needed = 0;
+	if (likely((atomic_read(&files->count) == 1))) {
+		file = fcheck_files(files, fd);
+	} else {
+		spin_lock(&files->file_lock);
+		file = fcheck_files(files, fd);
+		if (file) {
+			get_file(file);
+			*fput_needed = 1;
+		}
+		spin_unlock(&files->file_lock);
+	}
+	return file;
+}
+```
+
+#### fpos_read()
+
+返回文件内部的偏移量.
+
+```c
+static inline loff_t file_pos_read(struct file *file)
+{
+	return file->f_pos;
+}
+```
+#### vfs_read()
+
+vfs_read()做一些检查,再调用真正的读操作:
+* 检查:文件打开模式,操作表,用户提供的数据区域是不是属于用户空间
+* 检查偏移量是否合法:包括申请读取的偏移区域是否大于0,申请读取的字节数是否超过了文件支持的单次最大读写大小
+* 如果文件本身有专用的读方法,直接使用;否则使用通用的读方法,向bio层发起读请求.事实上,大部分文件系统都没有提供专用的读方法,基本都是使用通用读,即是do_sync_read.
+* 返回读取字节的数量
+
+
+```c
+ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
+{
+	ssize_t ret;
+
+	// 检查:文件打开模式,操作表,用户提供的数据区域是不是属于用户空间
+	if (!(file->f_mode & FMODE_READ))
+		return -EBADF;
+	if (!file->f_op || (!file->f_op->read && !file->f_op->aio_read))
+		return -EINVAL;
+	if (unlikely(!access_ok(VERIFY_WRITE, buf, count)))
+		return -EFAULT;
+
+	// 检查偏移量是否合法
+	ret = rw_verify_area(READ, file, pos, count);
+	if (!ret) {
+
+		// 是否可读
+		ret = security_file_permission (file, MAY_READ);
+		if (!ret) {
+			// 如果文件本身有专用的读方法,直接使用;否则使用bio层发起读请求
+			if (file->f_op->read)
+				ret = file->f_op->read(file, buf, count, pos);
+			else
+				ret = do_sync_read(file, buf, count, pos);
+			if (ret > 0) {
+				dnotify_parent(file->f_dentry, DN_ACCESS);
+				current->rchar += ret;
+			}
+			current->syscr++;
+		}
+	}
+
+	return ret;
+}
+```
+
+#### do_sync_read()与__generic_file_aio_read()
+
+do_sync_read把请求实例化为kiocb结构体,并调用一个复杂的函数来执行真正的读.这个函数是__generic_file_aio_read(),该函数可以作为所有文件系统的读例程.linux源码中有这样的注释:
+
+>This is the "read()" routine for all filesystems that can use the page cache directly.
+
+__generic_file_aio_read大致工作如下:
+* 获取待读取文件的address_space
+* 获取文件的索引节点
+* 初始化读取位置:待读取页的索引(即地址空间中的页索引),第一个请求字节在页内的偏移量.
+* 陷入一个循环,循环读取页.
+* 检查待读取页是否已经在address_space中,如果不是,则需要向磁盘发起申请,把数据放到address_space中.
+* **把页数据从内核空间拷贝到用户空间**
+* 检查是否还有数据需要读.如果没有,则跳出循环;否则继续.
+
+```c
+
+/*
+ * This is the "read()" routine for all filesystems
+ * that can use the page cache directly.
+ */
+ssize_t
+__generic_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
+		unsigned long nr_segs, loff_t *ppos)
+{
+	struct file *filp = iocb->ki_filp;
+	ssize_t retval;
+	unsigned long seg;
+	size_t count;
+
+	count = 0;
+	for (seg = 0; seg < nr_segs; seg++) {
+		const struct iovec *iv = &iov[seg];
+
+		/*
+		 * If any segment has a negative length, or the cumulative
+		 * length ever wraps negative then return -EINVAL.
+		 */
+		count += iv->iov_len;
+		if (unlikely((ssize_t)(count|iv->iov_len) < 0))
+			return -EINVAL;
+		if (access_ok(VERIFY_WRITE, iv->iov_base, iv->iov_len))
+			continue;
+		if (seg == 0)
+			return -EFAULT;
+		nr_segs = seg;
+		count -= iv->iov_len;	/* This segment is no good */
+		break;
+	}
+
+	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
+	if (filp->f_flags & O_DIRECT) {
+		loff_t pos = *ppos, size;
+		struct address_space *mapping;
+		struct inode *inode;
+
+		mapping = filp->f_mapping;
+		inode = mapping->host;
+		retval = 0;
+		if (!count)
+			goto out; /* skip atime */
+		size = i_size_read(inode);
+		if (pos < size) {
+			retval = generic_file_direct_IO(READ, iocb,
+						iov, pos, nr_segs);
+			if (retval >= 0 && !is_sync_kiocb(iocb))
+				retval = -EIOCBQUEUED;
+			if (retval > 0)
+				*ppos = pos + retval;
+		}
+		file_accessed(filp);
+		goto out;
+	}
+
+	retval = 0;
+	if (count) {
+		for (seg = 0; seg < nr_segs; seg++) {
+			read_descriptor_t desc;
+
+			desc.written = 0;
+			desc.arg.buf = iov[seg].iov_base;
+			desc.count = iov[seg].iov_len;
+			if (desc.count == 0)
+				continue;
+			desc.error = 0;
+			do_generic_file_read(filp,ppos,&desc,file_read_actor);
+			retval += desc.written;
+			if (!retval) {
+				retval = desc.error;
+				break;
+			}
+		}
+	}
+out:
+	return retval;
+}
+
+
+```
+
+### write()调用
+
+
+sys_write乍一看有点像sys_read,主要涉及到这几个函数:
+* `fget_light()`,获取文件对象.如果文件表给共享了,就需要减小文件对象的引用计数.
+* `file_pos_read()`,获取偏移量
+* `vfs_write()`,做一些检查,并调用文件系统的专用写方法,或通用写方法:
+	* `generic_file_direct_write`,通用的同步写方法,当文件打开时开启了O_DIRECT才调用.
+	* `__generic_file_aio_write_nolock()`,通用的异步写方法,涉及到`请求磁盘分配更多的数据块提供给文件`,`向磁盘提交写请求`.
+* `file_pos_write()`,更新偏移量
+* `fput_light()`,如果文件表给共享了,就需要减小文件对象的引用计数.
+
+```c
+asmlinkage ssize_t sys_write(unsigned int fd, const char __user * buf, size_t count)
+{
+	struct file *file;
+	ssize_t ret = -EBADF;
+	int fput_needed;
+
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_write(file, buf, count, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
+	}
+
+	return ret;
+}
+```
+
+#### fget_light()
+
+获取文件对象,同sys_read().
+
+#### file_pos_read()
+
+获取文件对象的指针偏移量,同sys_read().
+
+#### vfs_write()
+
+检查工作同sys_read().
+
+也会根据文件系统是否提供专用的写操作,来决定是否调用通用读例程.
+
+```c
+ssize_t vfs_write(struct file *file, const char __user *buf, size_t count, loff_t *pos)
+{
+	ssize_t ret;
+
+	if (!(file->f_mode & FMODE_WRITE))
+		return -EBADF;
+	if (!file->f_op || (!file->f_op->write && !file->f_op->aio_write))
+		return -EINVAL;
+	if (unlikely(!access_ok(VERIFY_READ, buf, count)))
+		return -EFAULT;
+
+	ret = rw_verify_area(WRITE, file, pos, count);
+	if (!ret) {
+		ret = security_file_permission (file, MAY_WRITE);
+		if (!ret) {
+			if (file->f_op->write)
+				ret = file->f_op->write(file, buf, count, pos);
+			else
+				ret = do_sync_write(file, buf, count, pos);
+			if (ret > 0) {
+				dnotify_parent(file->f_dentry, DN_MODIFY);
+				current->wchar += ret;
+			}
+			current->syscw++;
+		}
+	}
+
+	return ret;
+}
+```
+
+#### do_sync_write()和__generic_file_aio_write_nolock()
+
+
+和do_sysc_read()非常像,不同的是,它要间接调用一个__generic_file_aio_write_nolock(),该函数工作如下:
+* 获取文件的address_space,以及inode节点
+* 循环检查要写入的每一页,包括是否超出文件大小限制,用户提供的数据是否在合法的用户空间内
+* 继续一些其他检查
+* 如果文件打开时,开启了O_DIRECT,则采用同步的写操作,直接把数据页同步到磁盘上
+* 否则采用异步写,即generic_file_buffered_write,其主要工作如下:
+	* 循环处理每个要写的页
+		* 调用pre_pare_write():
+			- 做检查工作.如果涉及调整磁盘上的文件结构,需要等待磁盘进行额外的工作.比如:进程从文件的中部开始写,覆盖原内容,但写入的内容超出了原文件的大小,磁盘就要为文件分配新的块,内核必须等待这个步骤完成,才能继续处理下一个页的写入,所以内核线程有可能陷入阻塞.
+		* 调用commit_write():
+			- 真正向磁盘提交写操作.
+
+```c
+
+ssize_t
+__generic_file_aio_write_nolock(struct kiocb *iocb, const struct iovec *iov,
+				unsigned long nr_segs, loff_t *ppos)
+{
+	struct file *file = iocb->ki_filp;
+	struct address_space * mapping = file->f_mapping;
+	size_t ocount;		/* original count */
+	size_t count;		/* after file limit checks */
+	struct inode 	*inode = mapping->host;
+	unsigned long	seg;
+	loff_t		pos;
+	ssize_t		written;
+	ssize_t		err;
+
+	// 循环检查
+	ocount = 0;
+	for (seg = 0; seg < nr_segs; seg++) {
+		const struct iovec *iv = &iov[seg];
+
+		/*
+		 * If any segment has a negative length, or the cumulative
+		 * length ever wraps negative then return -EINVAL.
+		 */
+		ocount += iv->iov_len;
+		if (unlikely((ssize_t)(ocount|iv->iov_len) < 0))
+			return -EINVAL;
+		if (access_ok(VERIFY_READ, iv->iov_base, iv->iov_len))
+			continue;
+		if (seg == 0)
+			return -EFAULT;
+		nr_segs = seg;
+		ocount -= iv->iov_len;	/* This segment is no good */
+		break;
+	}
+
+	count = ocount;
+	pos = *ppos;
+
+	vfs_check_frozen(inode->i_sb, SB_FREEZE_WRITE);
+
+	/* We can write back this queue in page reclaim */
+	current->backing_dev_info = mapping->backing_dev_info;
+	written = 0;
+
+	err = generic_write_checks(file, &pos, &count, S_ISBLK(inode->i_mode));
+	if (err)
+		goto out;
+
+	if (count == 0)
+		goto out;
+
+	err = remove_suid(file->f_dentry);
+	if (err)
+		goto out;
+
+	inode_update_time(inode, 1);
+
+	/* coalesce the iovecs and go direct-to-BIO for O_DIRECT */
+	if (unlikely(file->f_flags & O_DIRECT)) {
+		written = generic_file_direct_write(iocb, iov,
+				&nr_segs, pos, ppos, count, ocount);
+		if (written < 0 || written == count)
+			goto out;
+		/*
+		 * direct-io write to a hole: fall through to buffered I/O
+		 * for completing the rest of the request.
+		 */
+		pos += written;
+		count -= written;
+	}
+
+
+	written = generic_file_buffered_write(iocb, iov, nr_segs,
+			pos, ppos, count, written);
+out:
+	current->backing_dev_info = NULL;
+	return written ? written : err;
+}
+```
+
+## 需要注意的细节
+
+写这篇笔记时,曾忘记一些细节,这里特别列出来.
+
+* 文件的引用计数f_count贯穿与整个打开,读写,关闭流程.
