@@ -36,6 +36,10 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [sizeof到底是什么](cpp/sizeof/README.md)
 
+- [x] [static,extern,thread_local的作用](cpp/storage-class-specifiers/README.md)
+
+- [x] [inline函数](cpp/inline-function/README.md)
+
 - [ ] 集成,虚拟继承,抽象类;不同继承下构造函数的调用顺序,析构函数的调用顺序
 
 - [ ] 如何实现一个内存池?
@@ -155,6 +159,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 - [ ] 线程的实现方式(从stuct_task的角度去分析group,thread,process)程通信子系统
 
 ### 进程通信子系统
+
+- [ ] 几种常见IPC方法的使用和原理
 
 ### 其他
 
