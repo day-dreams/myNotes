@@ -19,7 +19,6 @@ linux虚拟文件系统之页高速缓存,文件的打开关闭和读写
 	- [close()的实现](#close的实现)
 		- [filp_close()](#filp_close)
 - [文件读写](#文件读写)
-	- [bio层](#bio层)
 	- [read()调用](#read调用)
 		- [fget_light()](#fget_light)
 		- [fpos_read()](#fpos_read)
@@ -442,9 +441,6 @@ int filp_close(struct file *filp, fl_owner_t id)
 
 读写才是我最关心的部分!
 
-### bio层
-
-
 ### read()调用
 
 
@@ -846,3 +842,6 @@ out:
 写这篇笔记时,曾忘记一些细节,这里特别列出来.
 
 * 文件的引用计数f_count贯穿与整个打开,读写,关闭流程.
+
+* 只有文件表有同步控制,文件对象本身没有同步控制.如果多个进程共同读/写一个文件, 会造成dirtry
+   write/read.
