@@ -7,6 +7,7 @@ C++的对齐策略
 - [什么时候发生对齐](#什么时候发生对齐)
 	- [class/struct定义](#classstruct定义)
 	- [对象定义](#对象定义)
+- [pragma pack(n)](#pragma-packn)
 - [注意的地方](#注意的地方)
 - [reference](#reference)
 
@@ -72,11 +73,25 @@ int x;//4 bytes
 char c;//1 bytes
 ```
 
+## pragma pack(n)
+
+```c
+#pragma pack(2)
+```
+
+这个指令是指示编译器,设置对齐方式的.pack(n)是说,对象地址应该从n的整数倍开始.
+
+
+这个我不是很懂,笔试遇到的话就直接上代码.
+
+
 ## 注意的地方
 
 * 对齐可能会重排列变量的布局
 
 * 如果追求极致的空间消耗,可以考虑优化对齐.
+
+* pack()指令
 
 ## reference
 
