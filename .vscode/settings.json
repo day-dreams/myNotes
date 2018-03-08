@@ -42,6 +42,8 @@
 		"type_traits": "cpp",
 		"typeinfo": "cpp",
 		"utility": "cpp",
-		"__config": "cpp"
+		"__config": "cpp",
+		"*.ipp": "c",
+		"vector": "cpp"
 	}
 }
