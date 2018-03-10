@@ -331,6 +331,16 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 
 ### 实现原理
 
+poll内部机制和select很像,不同的是,poll不是通过bitmap来实现扫描,而是直接使用单向链表实现的.
+
+poll在内部会扫描整个链表,每扫描一次都检查下`是不是超时`,`有没有信号待处理`.如果有一次扫描发现了1个或多个可用的sockfd,就直接返回.
+
+poll检查文件是否可用,也是通过文件对象操作表里的poll()函数,和select是一样的.
+
+poll相对select的优点在于:
+* 没有socket数量限制
+* 内存消耗相对小写
+
 ## epoll
 
 ### 使用
@@ -345,3 +355,7 @@ int do_select(int n, fd_set_bits *fds, long *timeout)
 	* 几个指针指向的参数会被修改
 	* n代表:要检查的最大socket fd+1
 	* 如果有signal发给了进程,select会直接返回,并提示调用者重新select一次
+* poll
+	* 非常像select,底层都依赖文件操作表的poll函数
+	* 没有socket数量限制
+	* 依然存在轮询的问题,轮询代表每次调用,都需要从用户空间复制数据到内核空间,再由内核去查询状态,还是非常低效的.
