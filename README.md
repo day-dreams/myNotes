@@ -129,7 +129,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [ ] 进程间通信(如何使用signal,pipe,消息队列等)
 
-- [x] [epoll,poll和select的使用与区别](linux/select-poll-epoll/README.md)
+- [x] [epoll,poll和select的使用、实现与区别](linux/select-poll-epoll/README.md)
 
 - [x] [字节序判断问题](os/endian/README.md)
 
