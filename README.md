@@ -127,7 +127,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 ## 编程
 
-- [ ] 进程间通信(如何使用signal,pipe,消息队列等)
+- [x] [进程间通信的几种方式](linux/ipc)
 
 - [x] [epoll,poll和select的使用、实现与区别](linux/select-poll-epoll/README.md)
 
