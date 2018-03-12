@@ -5,6 +5,8 @@
 
 * 介绍你最熟悉的一个部分
 
+* 了解tcp socket、udp socket在接收数据、发送数据时的细节吗?
+
 * static,extern关键字的作用
 
 * inline关键字的作用
@@ -38,3 +40,5 @@
 ## 面试经历
 
 * [美团点评](01-meituan.md)
+
+* [阿里-杭州天猫](02-ali.md)
