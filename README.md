@@ -44,7 +44,9 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [线程安全,循环引用 与 智能指针](cpp/smart-ptr/README.md)
 
-- [ ] [各种继承及其对象内存布局](cpp/oop/README.md)
+- [x] [各种继承及其对象内存布局](cpp/oop/README.md)
+
+- [x] [类型转换](cpp/cast/README.md)
 
 - [ ] volatile关键字
 
