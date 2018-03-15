@@ -44,6 +44,7 @@
 		"utility": "cpp",
 		"__config": "cpp",
 		"*.ipp": "c",
-		"vector": "cpp"
+		"vector": "cpp",
+		"unistd.h": "c"
 	}
 }
