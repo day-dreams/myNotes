@@ -94,6 +94,8 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [InnoDB中的并发控制(待完善)](database/mysql/innodb/lock-ctl-innodb.md)
 
+- [ ] Redis网络连接处理模式
+
 - [ ] Mysql索引的使用和实现原理
 
 - [ ] 事务提交的注意事项和实现细节
@@ -150,8 +152,6 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [页高速缓存,文件打开关闭和读写](linux/kernel/vfs/note6-page-cache-and-file-ops.md)
 
-- [ ] 文件描述符的实现方式(从普通的文件io和网络io等角度去讨论)
-
 - [ ] VFS的四层抽象是什么？为什么要这样抽象？每层抽象解决什么问题？
 
 - [ ] 内存映射的原理及应用
@@ -162,7 +162,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 
 - [x] [socket实现原理](linux/kernel/net/note7-whats-socket.md)
 
-- [ ] epoll和select的实现方式
+- [x] [selec,tepoll和select的实现方式](linux/select-poll-epoll.README.md)
 
 - [ ] UDP socket在收包发包时的具体细节(为什么可以用一个socket向很多个服务器发包再使用select收包)
 
