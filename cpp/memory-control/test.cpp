@@ -36,26 +36,26 @@ void test_operator_new_delete()
     }
 }
 
-void *operator new(size_t size)
-{
-    std::cout << "operator new called." << size << std::endl;
-    return malloc(size);
-}
-void operator delete(void *ptr)
-{
-    std::cout << "operator delete called." << std::endl;
-    return free(ptr);
-}
-void *operator new[](size_t size)
-{
-    std::cout << "operator new[] called." << size << std::endl;
-    return malloc(size);
-}
-void operator delete[](void *ptr)
-{
-    std::cout << "operator delete[] called." << std::endl;
-    return free(ptr);
-}
+// void *operator new(size_t size)
+// {
+//     std::cout << "operator new called." << size << std::endl;
+//     return malloc(size);
+// }
+// void operator delete(void *ptr)
+// {
+//     std::cout << "operator delete called." << std::endl;
+//     return free(ptr);
+// }
+// void *operator new[](size_t size)
+// {
+//     std::cout << "operator new[] called." << size << std::endl;
+//     return malloc(size);
+// }
+// void operator delete[](void *ptr)
+// {
+//     std::cout << "operator delete[] called." << std::endl;
+//     return free(ptr);
+// }
 
 class Object
 {
@@ -84,6 +84,14 @@ void test_expression_new_delete()
         delete[] x;
     }
 }
+
+class Int
+{
+  public:
+    int x = 1;
+    int y = 2;
+    int z = 3;
+};
 
 int main(int argc, char **argv)
 {

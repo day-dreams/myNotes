@@ -26,17 +26,33 @@ void mythread()
     std::cout << "object5: " << object5.x << std::endl;
     std::cout << "subtherad exited" << std::endl;
 }
+
+void fun()
+{
+    static Test object19(19);
+}
 int main(int argc, char** argv)
 {
-    Test              object4(4);
-    thread_local Test object7(7);
-    static Test       object3(3);
+    Test object4(4);
+
+    {
+        static Test object222;
+        static Test object3(3);
+        static Test object111;
+    }
+    static Test object11(11);
+
+    fun();
+
+    // thread_local Test object7(7);
     // std::cout << "object5: " << object5.x << std::endl;
 
-    std::thread x(mythread);
-    x.join();
-    std::thread y(mythread);
-    y.join();
+    new Test(10);
+
+    // std::thread x(mythread);
+    // x.join();
+    // std::thread y(mythread);
+    // y.join();
 
     return 0;
 }

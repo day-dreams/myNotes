@@ -5,15 +5,15 @@
 <!-- TOC -->
 
 - [C++中的内存控制函数](#c中的内存控制函数)
-    - [malloc,calloc,realloc,free](#malloccallocreallocfree)
-        - [malloc](#malloc)
-        - [calloc](#calloc)
-        - [realloc](#realloc)
-        - [free](#free)
-            - [为什么free不需要提供内存大小?](#为什么free不需要提供内存大小)
-    - [operator new,delete](#operator-newdelete)
-        - [为什么要有operator new和operator delete的重载功能?](#为什么要有operator-new和operator-delete的重载功能)
-    - [new,delete expression](#newdelete-expression)
+	- [malloc,calloc,realloc,free](#malloccallocreallocfree)
+		- [malloc](#malloc)
+		- [calloc](#calloc)
+		- [realloc](#realloc)
+		- [free](#free)
+			- [为什么free不需要提供内存大小?](#为什么free不需要提供内存大小)
+	- [operator new,delete](#operator-newdelete)
+		- [为什么要有operator new和operator delete的重载功能?](#为什么要有operator-new和operator-delete的重载功能)
+	- [new,delete expression](#newdelete-expression)
 
 <!-- /TOC -->
 
