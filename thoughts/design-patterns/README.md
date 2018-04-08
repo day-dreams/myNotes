@@ -134,7 +134,44 @@ State模式由Context/State/ConcreteState组成，这是它的设计图：
 
 ### Facade模式
 
+解决问题：**为子系统的一组接口提供一致的界面**。
+
+随着子系统的复杂化，子系统实现一个接口可能需要使用越来越多的类，但上层调用并不关系底层实现，也不需要知道子系统专用的类，所以我们可以提供一个界面(facade)，作为上层调用子系统的入口点。
+
+外观模式很简单，由Facade/Subsystem classes组成。设计图如下：
+
+![facade](facade-pattern.png)
+
 ### Flyweight模式
+
+解决问题：**当一个系统中有大量的小对象，并且他们具有大量显著的外部状态，以及少数几个显著的内部状态，那么可以使用Flyweight模式,通过共享对象来减小空间开销**。
+
+比如在一个编辑软件中，为了达到最大的灵活性，可以为每个字符设立一个对象。绘制界面时，依次调用字符对象的相关方法。这带来一个问题：字符对象太多，浪费了大量内存。字符本身是个内部状态，大概包括字符的unicode值;绘制时则涉及到大量的外部状态，比如字符的位置、字体、大小、颜色等。我们可以把内部状态设立成对象，外部状态则设立成接口参数。文本里的每个字都是一个对象，负责维护外部状态和内部对象引用。绘制时，每个子对象把外部状态写在参数里，调用内部状态对象的接口，完成绘制工作。而内部状态对象与unicode字符一一对应，如果多个不同的子对象具有相同的unicode字符值，那么他们引用的是同一个内部状态对象。
+
+当然，外部状态也可以设立成对象，不一定要放到接口参数。另外，内部对象由于是共享的，需要设立专门的方法来创建他们。比如单例模式等。
+
+Flyweight享元模式由Flyweight/ConcreteFlyweight/UnsharedConcreteFlyweight/FlyweightFactory/Client组成。
+
+* `Flyweight`，一个抽象的接口类。
+* `ConcreteFlyweight`，实现`Flyweight`的接口，维护内部状态。
+* `UnsharedConcreteFlyweight`，实现`Flyweight`的接口，维护内部状态。与`ConcreteFlyweight`不同的是，`UnsharedConcreteFlyweight`不被共享，因为这个模式并不强制我们去共享每个内部状态。
+* `FlyweightFactory`，用于创建、管理Flyweight对象。
+* `Client`，维护一个`Flyweight`的引用，维护多个外部状态的数据。由这个类完成对  `Flyweight`的调用。
+
+设计图如下：
+
+![](flyweight-pattern-1.png)
+
+这个图更好的说明了，ConcreteFlyweight是如何被共享的：
+
+![](flyweight-pattern-2.png)
+
+
+在编辑软件的例子中，内部状态、外部状态的共享情况可以这样说明：
+
+![](flyweight-pattern-3.png)
+
+Flyweight模式的思想可以用于实现State模式和Strategy模式，起到节省空间的作用。
 
 ### Abstract Factory模式
 
