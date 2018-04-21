@@ -3,6 +3,7 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 <!-- TOC -->
 
 - [编程语言](#编程语言)
+    - [Golang](#golang)
     - [C++](#c)
 - [TCP/IP](#tcpip)
 - [数据库](#数据库)
@@ -22,6 +23,10 @@ master分支太乱了，暂时不想整理，所以重新开一个分支来放�
 <!-- /TOC -->
 
 # 编程语言
+
+## Golang
+
+- [x] [深入理解Golang slice](golang/inside-slice/README.md)
 
 ## C++
 
