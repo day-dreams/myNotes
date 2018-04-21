@@ -5,7 +5,7 @@
 
 ## 源代码slice.go
 
-这个源码实现了一些slice的内部函数,从[源码]()上看，slice的本质和c++中的vector非常像，一看就知道是怎么回事：
+这个源码实现了一些slice的内部函数,从[源码](https://github.com/day-dreams/golang-1.9/blob/master/src/runtime/slice.go)上看，slice的本质和c++中的vector非常像，一看就知道是怎么回事：
 
 ```golang
 type slice struct {
